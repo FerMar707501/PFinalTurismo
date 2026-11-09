@@ -1,0 +1,38 @@
+name: rutaia
+
+services:
+  db:
+    image: mysql:8.4
+    container_name: rutaia-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_local_dev}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-rutaia}
+      MYSQL_USER: ${MYSQL_USER:-rutaia}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-rutaia_local_dev}
+      TZ: ${TZ:-America/Bogota}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_spanish_ci
+      - --default-time-zone=+00:00
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Los scripts se ejecutan solo la primera vez que se crea el volumen.
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+volumes:
+  mysql_data:
+    name: rutaia_mysql_data

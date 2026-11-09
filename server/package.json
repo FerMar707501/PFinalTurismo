@@ -1,0 +1,38 @@
+{
+  "name": "rutaia-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API REST y servicios de IA de RutaIA",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:seed": "node scripts/seed.js",
+    "db:ingest": "node scripts/ingest.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.3",
+    "groq-sdk": "^1.6.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.12.1",
+    "mysql2": "^3.24.6",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "nock": "^15.0.6",
+    "supertest": "^7.3.2",
+    "vitest": "^4.1.12"
+  }
+}

@@ -1,0 +1,11 @@
+# Normalización de saltos de línea
+* text=auto eol=lf
+
+# Binarios
+*.pdf binary
+*.pbix binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary

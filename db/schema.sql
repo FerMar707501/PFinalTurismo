@@ -1,0 +1,11 @@
+-- ============================================================
+-- RutaIA — Esquema de base de datos
+-- Se completará en la Fase 1.
+--
+-- Este archivo se ejecuta automáticamente la primera vez que
+-- se crea el volumen de MySQL (docker compose up -d).
+-- ============================================================
+
+-- Fase 1: tablas users, destinations, activities, documents,
+-- ai_services, conversations, messages, usage_logs, agent_runs,
+-- api_clients, índices y FULLTEXT.
