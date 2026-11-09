@@ -8,50 +8,10 @@
  *   npm run db:ingest
  */
 import { pool, closePool } from '../src/config/db.js';
-
-const PRICE_LEVEL_LABELS = {
-  1: 'económico',
-  2: 'moderado',
-  3: 'alto',
-  4: 'lujo',
-};
-
-const priceFormatter = new Intl.NumberFormat('es-CO');
-
-function formatPrice(value) {
-  return `$${priceFormatter.format(Number(value ?? 0))} COP`;
-}
-
-function buildDestinationContent(destination, activities) {
-  const activityLines = activities.map(
-    (activity) =>
-      `- ${activity.name} (${activity.category}, ${activity.duration_min} min, ${formatPrice(activity.price)}): ${activity.description}`,
-  );
-
-  return [
-    `Destino: ${destination.name}`,
-    `Región: ${destination.region}`,
-    `Categoría: ${destination.category}`,
-    `Etiquetas: ${destination.tags ?? 'sin etiquetas'}`,
-    `Nivel de precio: ${PRICE_LEVEL_LABELS[destination.price_level] ?? destination.price_level}`,
-    `Mejor temporada: ${destination.best_season ?? 'todo el año'}`,
-    `Descripción: ${destination.description}`,
-    activityLines.length > 0
-      ? `Actividades disponibles:\n${activityLines.join('\n')}`
-      : 'Actividades disponibles: no registradas.',
-  ].join('\n');
-}
-
-function buildActivityContent(activity, destination) {
-  return [
-    `Actividad: ${activity.name}`,
-    `Destino: ${destination.name} (${destination.region})`,
-    `Categoría: ${activity.category}`,
-    `Duración: ${activity.duration_min} minutos`,
-    `Precio: ${formatPrice(activity.price)}`,
-    `Descripción: ${activity.description}`,
-  ].join('\n');
-}
+import {
+  buildActivityContent,
+  buildDestinationContent,
+} from '../src/rag/catalogDocuments.js';
 
 async function ingestDocuments() {
   const [destinations] = await pool.query(

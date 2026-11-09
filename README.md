@@ -48,12 +48,14 @@ PROYECTOFINAL/
 ├── server/                  # Express API (Node.js)
 │   ├── src/
 │   │   ├── config/          # Entorno, MySQL, constantes y OpenAPI
-│   │   ├── middleware/      # Request ID, errores (auth y cuotas en Fase 3)
+│   │   ├── middleware/      # Request ID, errores, JWT, roles y validación
 │   │   ├── errors/          # AppError
 │   │   ├── routes/          # Router principal y health check
-│   │   ├── modules/         # auth, users, catalog, chat, agents, analytics
-│   │   ├── ai/              # Cliente Groq, RAG, prompts
-│   │   ├── tools/           # Herramientas de los agentes
+│   │   ├── modules/         # auth, users, catalog, services, usage
+│   │   ├── rag/             # Documentos y sincronización del catálogo con el RAG
+│   │   ├── utils/           # JWT, bcrypt y paginación
+│   │   ├── ai/              # Cliente Groq, RAG, prompts (Fase 4+)
+│   │   ├── tools/           # Herramientas de los agentes (Fase 5+)
 │   │   ├── app.js           # Configuración de Express
 │   │   └── server.js        # Arranque y cierre ordenado
 │   ├── scripts/             # seed, ingest
@@ -105,16 +107,62 @@ La API está disponible en `http://localhost:4000` y su documentación interacti
 | GET | `/api/health` | Pública | Estado de la API y de MySQL |
 | GET | `/api/docs` | Pública | Swagger UI |
 | GET | `/api/docs.json` | Pública | Especificación OpenAPI 3.0.3 |
+| POST | `/api/auth/login` | Pública | Inicio de sesión y entrega del JWT |
+| GET | `/api/auth/me` | JWT | Usuario autenticado y su cuota |
+| GET | `/api/users` | JWT admin | Lista paginada de usuarios con filtros |
+| POST | `/api/users` | JWT admin | Crea un usuario (no hay registro público) |
+| GET | `/api/users/:id` | JWT admin | Detalle de usuario y cuota |
+| PATCH | `/api/users/:id` | JWT admin | Actualiza datos, rol, cuota o estado |
+| DELETE | `/api/users/:id` | JWT admin | Desactiva un usuario (borrado lógico) |
+| GET | `/api/destinations` | Pública | Lista destinos con filtros y paginación |
+| GET | `/api/destinations/:id` | Pública | Destino con sus actividades |
+| POST | `/api/destinations` | JWT admin | Crea un destino y sincroniza el RAG |
+| PATCH | `/api/destinations/:id` | JWT admin | Actualiza un destino y sincroniza el RAG |
+| DELETE | `/api/destinations/:id` | JWT admin | Desactiva un destino y limpia el RAG |
+| GET | `/api/activities` | Pública | Lista actividades con filtros |
+| GET | `/api/activities/:id` | Pública | Detalle de una actividad |
+| POST | `/api/activities` | JWT admin | Crea una actividad y sincroniza el RAG |
+| PATCH | `/api/activities/:id` | JWT admin | Actualiza una actividad y sincroniza el RAG |
+| DELETE | `/api/activities/:id` | JWT admin | Desactiva una actividad y limpia el RAG |
+| GET | `/api/services` | Pública/JWT | Servicios de IA habilitados; admin ve todos |
+| GET | `/api/services/:code` | Pública/JWT | Detalle de un servicio de IA |
+| PATCH | `/api/services/:code` | JWT admin | Edita modelo, temperatura, tokens o prompt |
+| PATCH | `/api/services/:code/status` | JWT admin | Activa o desactiva un servicio de IA |
+| GET | `/api/usage/me` | JWT | Cuota mensual de tokens del usuario |
 
 Características implementadas:
 
+- Autenticación JWT, contraseñas con bcrypt y roles `admin`/`user`.
+- Límite de intentos de login: 10 fallos cada 15 minutos por IP.
+- CRUD de usuarios con paginación, búsqueda, filtros y borrado lógico.
+- Protección contra autodesactivación y contra dejar el sistema sin administradores.
+- CRUD de destinos y actividades con filtros, paginación y borrado lógico.
+- Sincronización automática del catálogo con los documentos del RAG.
+- Configuración de servicios de IA; el `system_prompt` solo se expone a administradores.
+- Cuota mensual de tokens calculada desde `usage_logs`, con período y fecha de reinicio.
 - Helmet con Content Security Policy adaptada a Swagger UI.
 - CORS restringido por `CORS_ORIGIN`.
 - Rate limit de 300 solicitudes cada 15 minutos por IP.
 - `X-Request-Id` en todas las respuestas y en los logs de error.
 - Manejo centralizado de errores (404, JSON inválido, errores de MySQL, validación Zod).
 - Arranque y cierre ordenado del servidor y del pool de MySQL.
-- Pruebas de integración con Vitest y Supertest.
+- 39 pruebas de integración con Vitest y Supertest.
+
+### Autenticación rápida
+
+```powershell
+$login = Invoke-RestMethod -Method Post `
+  -Uri http://localhost:4000/api/auth/login `
+  -ContentType 'application/json' `
+  -Body (@{ email = 'admin@rutaia.local'; password = 'Admin123!' } | ConvertTo-Json)
+
+$headers = @{ Authorization = "Bearer $($login.token)" }
+Invoke-RestMethod -Uri http://localhost:4000/api/users -Headers $headers
+```
+
+En Postman o en el frontend, el token se envía como
+`Authorization: Bearer <token>`. Los endpoints públicos de catálogo aceptan un token
+opcional: si pertenece a un administrador, muestran también registros inactivos.
 
 ## Puesta en marcha (local)
 
@@ -226,7 +274,7 @@ La aplicación queda en `http://localhost:5173`.
 | 0 | Preparación: repo, estructura, Docker, entorno, README | ✅ Completada |
 | 1 | Base de datos: esquema, datos de prueba, ingesta RAG | ✅ Completada |
 | 2 | Esqueleto de la API, Swagger, manejo de errores | ✅ Completada |
-| 3 | Autenticación, roles, CRUD y configuración de servicios | ⏳ Pendiente |
+| 3 | Autenticación, roles, CRUD y configuración de servicios | ✅ Completada |
 | 4 | Chat RAG, memoria, cuotas e historial | ⏳ Pendiente |
 | 5 | Agentes multi-paso y fuentes externas | ⏳ Pendiente |
 | 6 | Frontend React | ⏳ Pendiente |
@@ -242,7 +290,12 @@ La aplicación queda en `http://localhost:5173`.
 - **Nunca** subas `.env` ni `server/.env` al repositorio.
 - La `GROQ_API_KEY` solo vive en el backend; jamás en el frontend.
 - Las contraseñas se almacenan con hash (bcrypt) y las API keys con hash SHA-256.
-- Todas las consultas SQL son parametrizadas.
+- Los JWT se firman con `JWT_SECRET`, expiran según `JWT_EXPIRES_IN` y se validan
+  contra el estado actual del usuario en cada solicitud.
+- El registro público está deshabilitado: solo un administrador crea usuarios.
+- Los endpoints administrativos exigen rol `admin`; el `system_prompt` de los
+  servicios de IA nunca se envía a usuarios normales.
+- Todas las consultas SQL son parametrizadas y las entradas se validan con Zod.
 
 ## Nota sobre OneDrive
 

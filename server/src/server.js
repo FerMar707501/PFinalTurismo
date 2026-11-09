@@ -21,7 +21,7 @@ server.on('error', (error) => {
   } else {
     console.error('[API] Error del servidor:', error.message);
   }
-  process.exitCode = 1;
+  process.exit(1);
 });
 
 async function logDatabaseStatus() {

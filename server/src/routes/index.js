@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import { APP_NAME, APP_VERSION, API_PREFIX } from '../config/constants.js';
 import healthRouter from './health.routes.js';
+import authRouter from '../modules/auth/auth.routes.js';
+import usersRouter from '../modules/users/users.routes.js';
+import destinationsRouter from '../modules/catalog/destinations.routes.js';
+import activitiesRouter from '../modules/catalog/activities.routes.js';
+import servicesRouter from '../modules/services/services.routes.js';
+import usageRouter from '../modules/usage/usage.routes.js';
 
 const router = Router();
 
@@ -10,9 +16,23 @@ router.get('/', (_req, res) => {
     version: APP_VERSION,
     docs: `${API_PREFIX}/docs`,
     health: `${API_PREFIX}/health`,
+    endpoints: {
+      auth: `${API_PREFIX}/auth`,
+      users: `${API_PREFIX}/users`,
+      destinations: `${API_PREFIX}/destinations`,
+      activities: `${API_PREFIX}/activities`,
+      services: `${API_PREFIX}/services`,
+      usage: `${API_PREFIX}/usage`,
+    },
   });
 });
 
 router.use('/health', healthRouter);
+router.use('/auth', authRouter);
+router.use('/users', usersRouter);
+router.use('/destinations', destinationsRouter);
+router.use('/activities', activitiesRouter);
+router.use('/services', servicesRouter);
+router.use('/usage', usageRouter);
 
 export default router;
