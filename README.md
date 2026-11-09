@@ -47,13 +47,18 @@ PROYECTOFINAL/
 ├── client/                  # React + Vite (SPA)
 ├── server/                  # Express API (Node.js)
 │   ├── src/
-│   │   ├── config/          # Entorno, conexión MySQL, Swagger
-│   │   ├── middleware/      # Auth, roles, cuotas, errores
+│   │   ├── config/          # Entorno, MySQL, constantes y OpenAPI
+│   │   ├── middleware/      # Request ID, errores (auth y cuotas en Fase 3)
+│   │   ├── errors/          # AppError
+│   │   ├── routes/          # Router principal y health check
 │   │   ├── modules/         # auth, users, catalog, chat, agents, analytics
 │   │   ├── ai/              # Cliente Groq, RAG, prompts
-│   │   └── tools/           # Herramientas de los agentes
+│   │   ├── tools/           # Herramientas de los agentes
+│   │   ├── app.js           # Configuración de Express
+│   │   └── server.js        # Arranque y cierre ordenado
 │   ├── scripts/             # seed, ingest
-│   └── tests/
+│   ├── tests/               # Pruebas con Vitest + Supertest
+│   └── vitest.config.js
 ├── db/
 │   ├── schema.sql           # Creación de tablas
 │   └── seed.sql             # Datos de demostración
@@ -86,6 +91,30 @@ MySQL 8.4 con `utf8mb4_spanish_ci` y almacenamiento en UTC. El detalle está en
 
 Datos iniciales: 3 usuarios, 12 destinos, 48 actividades, 3 servicios de IA,
 3 conversaciones, 6 mensajes, 22 registros de consumo y 60 documentos para el RAG.
+
+## API
+
+La API está disponible en `http://localhost:4000` y su documentación interactiva en
+`http://localhost:4000/api/docs`. El documento OpenAPI se puede consumir en
+`http://localhost:4000/api/docs.json`.
+
+| Método | Ruta | Autenticación | Descripción |
+|---|---|---|---|
+| GET | `/` | Pública | Información general del servicio |
+| GET | `/api` | Pública | Información de la API |
+| GET | `/api/health` | Pública | Estado de la API y de MySQL |
+| GET | `/api/docs` | Pública | Swagger UI |
+| GET | `/api/docs.json` | Pública | Especificación OpenAPI 3.0.3 |
+
+Características implementadas:
+
+- Helmet con Content Security Policy adaptada a Swagger UI.
+- CORS restringido por `CORS_ORIGIN`.
+- Rate limit de 300 solicitudes cada 15 minutos por IP.
+- `X-Request-Id` en todas las respuestas y en los logs de error.
+- Manejo centralizado de errores (404, JSON inválido, errores de MySQL, validación Zod).
+- Arranque y cierre ordenado del servidor y del pool de MySQL.
+- Pruebas de integración con Vitest y Supertest.
 
 ## Puesta en marcha (local)
 
@@ -139,7 +168,15 @@ npm run db:ingest   # genera los 60 documentos del RAG (requiere MySQL arriba)
 npm run dev
 ```
 
-La API queda en `http://localhost:4000` (se implementa en la Fase 2).
+La API queda en `http://localhost:4000`, con documentación en
+`http://localhost:4000/api/docs` y health check en `http://localhost:4000/api/health`.
+
+Para ejecutar las pruebas:
+
+```powershell
+cd server
+npm test
+```
 
 ### 4. Frontend
 
@@ -188,7 +225,7 @@ La aplicación queda en `http://localhost:5173`.
 |---|---|---|
 | 0 | Preparación: repo, estructura, Docker, entorno, README | ✅ Completada |
 | 1 | Base de datos: esquema, datos de prueba, ingesta RAG | ✅ Completada |
-| 2 | Esqueleto de la API, Swagger, manejo de errores | ⏳ Pendiente |
+| 2 | Esqueleto de la API, Swagger, manejo de errores | ✅ Completada |
 | 3 | Autenticación, roles, CRUD y configuración de servicios | ⏳ Pendiente |
 | 4 | Chat RAG, memoria, cuotas e historial | ⏳ Pendiente |
 | 5 | Agentes multi-paso y fuentes externas | ⏳ Pendiente |
