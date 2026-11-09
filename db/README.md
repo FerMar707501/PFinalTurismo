@@ -6,7 +6,7 @@ Motor: **MySQL 8.4** · Charset `utf8mb4` · Collation `utf8mb4_spanish_ci` · Z
 
 | Archivo | Contenido |
 |---|---|
-| `schema.sql` | Crea la base, las 10 tablas, índices, claves foráneas y 2 vistas |
+| `schema.sql` | Crea la base, las 11 tablas, índices, claves foráneas y 2 vistas |
 | `seed.sql` | Usuarios, 12 destinos, 48 actividades, 3 servicios IA, conversaciones y consumo de ejemplo |
 | `../server/scripts/ingest.js` | Genera los 60 documentos del RAG a partir del catálogo |
 
@@ -57,8 +57,8 @@ activity     48
 destination  12
 ```
 
-El script es idempotente: borra y regenera únicamente los documentos de tipo
-`destination` y `activity`, y conserva los documentos manuales.
+El script es idempotente: actualiza los documentos existentes de tipo `destination` y
+`activity`, elimina los de entidades que ya no existen y conserva los documentos manuales.
 
 ## Credenciales de demostración
 
