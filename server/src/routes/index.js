@@ -8,6 +8,7 @@ import activitiesRouter from '../modules/catalog/activities.routes.js';
 import servicesRouter from '../modules/services/services.routes.js';
 import usageRouter from '../modules/usage/usage.routes.js';
 import chatRouter from '../modules/chat/chat.routes.js';
+import agentsRouter from '../modules/agents/agents.routes.js';
 
 const router = Router();
 
@@ -25,6 +26,7 @@ router.get('/', (_req, res) => {
       services: `${API_PREFIX}/services`,
       usage: `${API_PREFIX}/usage`,
       chat: `${API_PREFIX}/chat`,
+      agents: `${API_PREFIX}/agents`,
     },
   });
 });
@@ -37,5 +39,6 @@ router.use('/activities', activitiesRouter);
 router.use('/services', servicesRouter);
 router.use('/usage', usageRouter);
 router.use('/chat', chatRouter);
+router.use('/agents', agentsRouter);
 
 export default router;

@@ -1,18 +1,20 @@
 # API RutaIA
 
 Backend Express de RutaIA. Implementa autenticación JWT, roles, CRUD de usuarios y
-catálogo, configuración de servicios de IA, chat RAG con memoria e historial, cuotas
-mensuales de tokens, seguridad, manejo centralizado de errores, health check y
-documentación OpenAPI.
+catálogo, configuración de servicios de IA, chat RAG con memoria e historial, dos
+agentes multi-paso con herramientas internas y externas, cuotas mensuales de tokens,
+seguridad, manejo centralizado de errores, health check y documentación OpenAPI.
 
 ## Estado actual
 
-La **Fase 4** está completada. La API ya permite iniciar sesión, administrar usuarios,
+La **Fase 5** está completada. La API ya permite iniciar sesión, administrar usuarios,
 gestionar destinos y actividades, activar o desactivar servicios de IA, consultar la
-cuota mensual y conversar con el chatbot RAG. Las respuestas recuperan contexto del
-catálogo con `FULLTEXT`, mantienen memoria de la conversación, registran las fuentes y
-descuentan los tokens reales. Los agentes multi-paso y la analítica se agregan en las
-fases siguientes.
+cuota mensual, conversar con el chatbot RAG y ejecutar los agentes `agent_itinerary` y
+`agent_compare`. El chatbot recupera contexto del catálogo con `FULLTEXT`; los agentes
+usan *tool calling* de Groq para consultar el catálogo, Open-Meteo, OSRM y Wikipedia en
+varios pasos. Todas las llamadas registran fuentes, consumo real, cuota y trazabilidad
+en `agent_runs` y `usage_logs`. La analítica y el frontend se agregan en las fases
+siguientes.
 
 ## Estructura
 
@@ -32,7 +34,12 @@ server/
 │   ├── errors/
 │   │   └── AppError.js
 │   ├── ai/
-│   │   └── groqClient.js        # Cliente Groq y normalización de la respuesta
+│   │   └── groqClient.js        # Cliente Groq, tool calling y normalización
+│   ├── agents/
+│   │   └── toolRunner.js        # Bucle multi-paso y ejecución de herramientas
+│   ├── tools/
+│   │   ├── agentTools.js        # Herramientas de catálogo para los agentes
+│   │   └── externalApis.js      # Open-Meteo, OSRM, Wikipedia y caché
 │   ├── rag/
 │   │   ├── catalogDocuments.js  # Documentos y sincronización del catálogo
 │   │   └── retrieval.js         # Recuperación FULLTEXT y contexto para el prompt
@@ -45,6 +52,7 @@ server/
 │   │   ├── catalog/       # Destinos y actividades
 │   │   ├── services/      # Servicios de IA
 │   │   ├── chat/          # Chat RAG, memoria, historial y fuentes
+│   │   ├── agents/        # Itinerarios y comparación de destinos
 │   │   └── usage/         # Cuotas y registro de consumo
 │   ├── utils/
 │   │   ├── jwt.js
@@ -57,7 +65,8 @@ server/
 ├── tests/
 │   ├── api.test.js        # Salud, Swagger y manejo de errores
 │   ├── fase3.test.js      # Auth, usuarios, catálogo, servicios y cuotas
-│   └── fase4.test.js      # Chat RAG, memoria, historial, cuotas y errores
+│   ├── fase4.test.js      # Chat RAG, memoria, historial, cuotas y errores
+│   └── fase5.test.js      # Agentes multi-paso, herramientas, fuentes y cuotas
 ├── vitest.config.js
 ├── .env.example
 └── package.json
@@ -149,6 +158,62 @@ Las conversaciones están aisladas por usuario. La respuesta incluye
 Si el servicio está desactivado responde `409 SERVICE_DISABLED`; si falta
 `GROQ_API_KEY` responde `503 AI_NOT_CONFIGURED`.
 
+### Agentes multi-paso
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/api/agents/itinerary` | JWT | Planifica un itinerario por días con clima, ruta y actividades |
+| POST | `/api/agents/compare` | JWT | Compara de 2 a 4 destinos y recomienda uno |
+| GET | `/api/agents/runs` | JWT | Lista las ejecuciones propias con filtros y paginación |
+| GET | `/api/agents/runs/:id` | JWT | Detalle de una ejecución, incluidos todos sus pasos |
+
+El **agente de itinerario** recibe `destinationId`, `days`, `originCity`, `travelers`,
+`budget`, `interests` y `notes`. El **agente comparador** recibe `destinationIds`
+(entre 2 y 4), `days`, `originCity`, `travelers`, `budget` e `interests`.
+
+Ambos agentes usan el mecanismo de *tool calling* de Groq con un máximo de 6 pasos:
+
+1. `get_destination_info`: ficha del catálogo.
+2. `list_destination_activities`: actividades, duración y precios.
+3. `get_weather_forecast`: pronóstico de Open-Meteo.
+4. `get_route_distance`: distancia y duración terrestre con OSRM.
+5. `get_wikipedia_summary`: contexto externo de Wikipedia en español.
+
+Las respuestas externas se guardan en `external_cache` con TTL para reducir llamadas y
+tolerar fallos temporales. Si una herramienta falla, el agente recibe el error y puede
+continuar con el resto de la información. Al finalizar se guardan:
+
+- La conversación y los mensajes en `conversations` / `messages`.
+- Las fuentes internas y externas en `messages.sources_json`.
+- La entrada, salida y todos los pasos en `agent_runs`.
+- El consumo real agregado de todas las llamadas en `usage_logs`.
+
+La respuesta incluye `run`, `conversationId`, `answer`, `sources`, `steps`, `usage` y
+`quota`. La cuota se estima de forma conservadora antes de ejecutar (prompt, reserva
+para resultados de herramientas y `max_tokens × 6`). Si no alcanza, responde
+`429 TOKEN_QUOTA_EXCEEDED` y registra el intento como `blocked`. Un servicio desactivado
+responde `409 SERVICE_DISABLED` y una ejecución fallida se conserva en `agent_runs` con
+estado `error`.
+
+Ejemplo de itinerario:
+
+```powershell
+$body = @{
+  destinationId = 6
+  days = 3
+  travelers = 2
+  budget = 'medio'
+  originCity = 'Bogotá'
+  interests = @('café', 'naturaleza')
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post `
+  -Uri http://localhost:4000/api/agents/itinerary `
+  -Headers $headers `
+  -ContentType 'application/json' `
+  -Body $body
+```
+
 ## Autenticación
 
 ```powershell
@@ -176,10 +241,11 @@ La cuota es mensual y se calcula con los registros `success` de `usage_logs` cuy
 - `limitTokens`, `usedTokens` y `remainingTokens`.
 - `percentUsed`, `exceeded`, `successfulRequests` y `blockedRequests`.
 
-El chat usa `assertQuotaAvailable()` antes de llamar a Groq y `recordUsage()` después
-de la llamada. Las solicitudes bloqueadas se guardan con estado `blocked` y las fallas
-del proveedor con estado `error`, sin sumar tokens a la cuota. Los agentes de la Fase 5
-reutilizarán el mismo mecanismo.
+El chat y los agentes usan `assertQuotaAvailable()` antes de llamar a Groq y
+`recordUsage()` después de la llamada. Las solicitudes bloqueadas se guardan con estado
+`blocked` y las fallas del proveedor con estado `error`, sin sumar tokens a la cuota.
+En los agentes, el consumo registrado es la suma real de todas las llamadas del bucle
+multi-paso y el detalle queda en `agent_runs.total_tokens`.
 
 ## Seguridad y validación
 
@@ -213,7 +279,7 @@ Copy-Item .env.example .env
 npm install
 npm run db:ingest   # requiere MySQL arriba
 npm run dev         # http://localhost:4000
-npm test            # Vitest + Supertest (49 pruebas)
+npm test            # Vitest + Supertest (58 pruebas)
 npm start           # producción
 ```
 
@@ -222,9 +288,10 @@ npm start           # producción
 - Health check: <http://localhost:4000/api/health>
 
 Las pruebas usan la misma base local configurada en `server/.env` y crean registros
-temporales con prefijos `TEST_Fase3_` y `TEST_Fase4_`; al final los eliminan. Las
-pruebas del chat simulan Groq, por lo que no consumen tokens ni necesitan una
-`GROQ_API_KEY` real. No ejecutes `npm test` contra una base de producción.
+temporales con prefijos `TEST_Fase3_`, `TEST_Fase4_` y `TEST_Fase5_`; al final los
+eliminan. Las pruebas del chat y de los agentes simulan Groq y las APIs externas, por lo
+que no consumen tokens, no dependen de Internet ni necesitan una `GROQ_API_KEY` real. No
+ejecutes `npm test` contra una base de producción.
 
 ## Variables de entorno
 
@@ -234,7 +301,6 @@ al repositorio. Antes de desplegar, cambia `JWT_SECRET` por un valor largo y ale
 
 ## Próximas fases
 
-- **Fase 5:** agentes multi-paso con herramientas internas y fuentes externas.
 - **Fase 6:** frontend React.
 - **Fase 7:** analítica web y Power BI.
 - **Fase 8:** pruebas completas, Swagger final y colección Postman.

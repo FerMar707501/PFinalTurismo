@@ -51,11 +51,12 @@ PROYECTOFINAL/
 │   │   ├── middleware/      # Request ID, errores, JWT, roles y validación
 │   │   ├── errors/          # AppError
 │   │   ├── routes/          # Router principal y health check
-│   │   ├── modules/         # auth, users, catalog, services, usage, chat
+│   │   ├── modules/         # auth, users, catalog, services, usage, chat, agents
 │   │   ├── rag/             # Documentos, sincronización y recuperación FULLTEXT
+│   │   ├── agents/          # Bucle multi-paso y tool calling
+│   │   ├── tools/           # Catálogo, Open-Meteo, OSRM y Wikipedia
 │   │   ├── utils/           # JWT, bcrypt y paginación
 │   │   ├── ai/              # Cliente Groq y normalización de respuestas
-│   │   ├── tools/           # Herramientas de los agentes (Fase 5+)
 │   │   ├── app.js           # Configuración de Express
 │   │   └── server.js        # Arranque y cierre ordenado
 │   ├── scripts/             # seed, ingest
@@ -132,6 +133,10 @@ La API está disponible en `http://localhost:4000` y su documentación interacti
 | POST | `/api/chat` | JWT | Envía un mensaje al chatbot RAG y descuenta tokens |
 | GET | `/api/chat/conversations` | JWT | Lista las conversaciones del usuario |
 | GET | `/api/chat/conversations/:id` | JWT | Historial y fuentes de una conversación propia |
+| POST | `/api/agents/itinerary` | JWT | Genera un itinerario multi-paso con clima y rutas |
+| POST | `/api/agents/compare` | JWT | Compara de 2 a 4 destinos con un agente multi-paso |
+| GET | `/api/agents/runs` | JWT | Lista las ejecuciones de agentes del usuario |
+| GET | `/api/agents/runs/:id` | JWT | Detalle y pasos de una ejecución propia |
 
 Características implementadas:
 
@@ -145,6 +150,10 @@ Características implementadas:
 - Cuota mensual de tokens calculada desde `usage_logs`, con período y fecha de reinicio.
 - Chat RAG con recuperación `FULLTEXT`, fuentes citables y memoria de los últimos mensajes.
 - Historial de conversaciones aislado por usuario, con listado y detalle paginado.
+- Dos agentes multi-paso con *tool calling*: itinerarios y comparación de destinos.
+- Herramientas internas del catálogo y fuentes externas gratuitas: Open-Meteo, OSRM y Wikipedia.
+- Caché de respuestas externas en `external_cache` y tolerancia a fallos de herramientas.
+- Trazabilidad de cada agente en `agent_runs` (entrada, salida, pasos, tokens y latencia).
 - Estimación de tokens antes de llamar a Groq, bloqueo por cuota y registro del consumo real.
 - Helmet con Content Security Policy adaptada a Swagger UI.
 - CORS restringido por `CORS_ORIGIN`.
@@ -152,7 +161,7 @@ Características implementadas:
 - `X-Request-Id` en todas las respuestas y en los logs de error.
 - Manejo centralizado de errores (404, JSON inválido, errores de MySQL, validación Zod).
 - Arranque y cierre ordenado del servidor y del pool de MySQL.
-- 49 pruebas de integración con Vitest y Supertest (Groq simulado en las pruebas).
+- 58 pruebas de integración con Vitest y Supertest (Groq y APIs externas simulados).
 
 ### Autenticación rápida
 
@@ -188,6 +197,29 @@ Para continuar una conversación, envía también `conversationId`. El historial
 consulta en `GET /api/chat/conversations` y
 `GET /api/chat/conversations/{id}`. La respuesta real de Groq requiere configurar
 `GROQ_API_KEY` en `server/.env`.
+
+Ejemplo de agente de itinerario:
+
+```powershell
+$body = @{
+  destinationId = 6
+  days = 3
+  travelers = 2
+  budget = 'medio'
+  originCity = 'Bogotá'
+  interests = @('café', 'naturaleza')
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post `
+  -Uri http://localhost:4000/api/agents/itinerary `
+  -Headers $headers `
+  -ContentType 'application/json' `
+  -Body $body
+```
+
+El agente consulta el catálogo, las actividades, el clima de Open-Meteo, la distancia
+con OSRM y el contexto de Wikipedia. La respuesta incluye `answer`, `sources`, `steps`,
+`usage` y `quota`; el historial se consulta en `GET /api/agents/runs`.
 
 ## Puesta en marcha (local)
 
@@ -301,7 +333,7 @@ La aplicación queda en `http://localhost:5173`.
 | 2 | Esqueleto de la API, Swagger, manejo de errores | ✅ Completada |
 | 3 | Autenticación, roles, CRUD y configuración de servicios | ✅ Completada |
 | 4 | Chat RAG, memoria, cuotas e historial | ✅ Completada |
-| 5 | Agentes multi-paso y fuentes externas | ⏳ Pendiente |
+| 5 | Agentes multi-paso, herramientas y fuentes externas | ✅ Completada |
 | 6 | Frontend React | ⏳ Pendiente |
 | 7 | Analítica web y Power BI | ⏳ Pendiente |
 | 8 | Pruebas, Swagger y Postman | ⏳ Pendiente |

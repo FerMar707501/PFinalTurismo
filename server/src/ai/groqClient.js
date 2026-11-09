@@ -25,19 +25,30 @@ export async function generateChatCompletion({
   messages,
   temperature,
   maxTokens,
+  tools = null,
+  toolChoice = null,
 }) {
   const groq = getClient();
 
   let completion;
+  const request = {
+    model,
+    messages,
+    temperature,
+    max_completion_tokens: maxTokens,
+    stream: false,
+  };
+
+  if (Array.isArray(tools) && tools.length > 0) {
+    request.tools = tools;
+  }
+
+  if (toolChoice) {
+    request.tool_choice = toolChoice;
+  }
 
   try {
-    completion = await groq.chat.completions.create({
-      model,
-      messages,
-      temperature,
-      max_completion_tokens: maxTokens,
-      stream: false,
-    });
+    completion = await groq.chat.completions.create(request);
   } catch (error) {
     const status = Number(error?.status);
 
@@ -72,9 +83,21 @@ export async function generateChatCompletion({
     );
   }
 
-  const content = completion?.choices?.[0]?.message?.content;
+  const choice = completion?.choices?.[0];
+  const message = choice?.message;
+  const rawToolCalls = Array.isArray(message?.tool_calls)
+    ? message.tool_calls
+    : [];
+  const toolCalls = rawToolCalls
+    .filter((toolCall) => toolCall?.function?.name)
+    .map((toolCall) => ({
+      id: toolCall.id,
+      name: toolCall.function.name,
+      arguments: toolCall.function.arguments ?? '{}',
+    }));
+  const content = typeof message?.content === 'string' ? message.content : '';
 
-  if (typeof content !== 'string' || content.trim().length === 0) {
+  if (content.trim().length === 0 && toolCalls.length === 0) {
     throw new AppError(
       502,
       'AI_EMPTY_RESPONSE',
@@ -92,6 +115,8 @@ export async function generateChatCompletion({
 
   return {
     content: content.trim(),
+    finishReason: choice?.finish_reason ?? null,
+    toolCalls,
     model: completion.model ?? model,
     usage: {
       promptTokens,

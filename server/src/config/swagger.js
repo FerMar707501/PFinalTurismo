@@ -109,6 +109,11 @@ export const openapiSpec = {
         'Chatbot RAG con recuperación en el catálogo, memoria e historial',
     },
     {
+      name: 'Agentes',
+      description:
+        'Agentes multi-paso de itinerarios y comparación con herramientas internas y externas',
+    },
+    {
       name: 'Consumo',
       description: 'Cuota mensual de tokens del usuario',
     },
@@ -499,6 +504,99 @@ export const openapiSpec = {
           401: errorResponse('No autenticado'),
           403: errorResponse('Usuario inactivo'),
           404: errorResponse('Conversación no encontrada'),
+        },
+      },
+    },
+    '/agents/itinerary': {
+      post: {
+        tags: ['Agentes'],
+        summary: 'Generar un itinerario multi-paso',
+        description:
+          'Ejecuta el agente planificador con herramientas internas del catálogo y fuentes externas (Open-Meteo, OSRM y Wikipedia). Registra la ejecución en agent_runs y descuenta los tokens reales.',
+        security: bearer,
+        requestBody: requestBody('ItineraryRequest'),
+        responses: {
+          201: response('Itinerario generado', 'AgentResponse'),
+          400: errorResponse('Datos inválidos'),
+          401: errorResponse('No autenticado'),
+          403: errorResponse('Usuario inactivo'),
+          404: errorResponse('Destino no encontrado o inactivo'),
+          409: errorResponse('Servicio de agente desactivado'),
+          429: errorResponse('Cuota mensual de tokens agotada'),
+          502: errorResponse('Error del proveedor de IA o de una fuente externa'),
+          503: errorResponse('Servicio de IA no configurado o saturado'),
+        },
+      },
+    },
+    '/agents/compare': {
+      post: {
+        tags: ['Agentes'],
+        summary: 'Comparar destinos con un agente multi-paso',
+        description:
+          'Compara entre dos y cuatro destinos consultando fichas, actividades, clima y distancias. Devuelve una tabla comparativa y una recomendación justificada.',
+        security: bearer,
+        requestBody: requestBody('CompareRequest'),
+        responses: {
+          201: response('Comparación generada', 'AgentResponse'),
+          400: errorResponse('Datos inválidos'),
+          401: errorResponse('No autenticado'),
+          403: errorResponse('Usuario inactivo'),
+          404: errorResponse('Algún destino no existe o está inactivo'),
+          409: errorResponse('Servicio de agente desactivado'),
+          429: errorResponse('Cuota mensual de tokens agotada'),
+          502: errorResponse('Error del proveedor de IA o de una fuente externa'),
+          503: errorResponse('Servicio de IA no configurado o saturado'),
+        },
+      },
+    },
+    '/agents/runs': {
+      get: {
+        tags: ['Agentes'],
+        summary: 'Listar mis ejecuciones de agentes',
+        description:
+          'Devuelve las ejecuciones propias con su estado, tokens, entrada y salida. No incluye el detalle de pasos.',
+        security: bearer,
+        parameters: [
+          queryParam('page', 'Número de página', {
+            type: 'integer',
+            minimum: 1,
+            default: 1,
+          }),
+          queryParam('limit', 'Elementos por página', {
+            type: 'integer',
+            minimum: 1,
+            maximum: 100,
+            default: 20,
+          }),
+          queryParam('serviceCode', 'Filtrar por agente', {
+            type: 'string',
+            enum: ['agent_itinerary', 'agent_compare'],
+          }),
+          queryParam('status', 'Filtrar por estado', {
+            type: 'string',
+            enum: ['running', 'success', 'error', 'partial'],
+          }),
+        ],
+        responses: {
+          200: response('Ejecuciones del usuario', 'AgentRunListResponse'),
+          401: errorResponse('No autenticado'),
+          403: errorResponse('Usuario inactivo'),
+        },
+      },
+    },
+    '/agents/runs/{id}': {
+      get: {
+        tags: ['Agentes'],
+        summary: 'Consultar una ejecución de agente',
+        description:
+          'Devuelve la entrada, salida y todos los pasos (herramientas, argumentos, resultados y duración) de una ejecución propia.',
+        security: bearer,
+        parameters: [pathParam('id', 'ID de la ejecución del agente')],
+        responses: {
+          200: response('Detalle de la ejecución', 'AgentRunDetailResponse'),
+          401: errorResponse('No autenticado'),
+          403: errorResponse('Usuario inactivo'),
+          404: errorResponse('Ejecución no encontrada'),
         },
       },
     },
@@ -1137,6 +1235,270 @@ export const openapiSpec = {
             type: 'array',
             items: ref('ChatMessage'),
           },
+        },
+      },
+      ItineraryRequest: {
+        type: 'object',
+        required: ['destinationId', 'days'],
+        properties: {
+          destinationId: {
+            type: 'integer',
+            format: 'int64',
+            minimum: 1,
+            example: 6,
+          },
+          days: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 15,
+            example: 3,
+          },
+          originCity: {
+            type: 'string',
+            example: 'Bogotá',
+            default: 'Bogotá',
+          },
+          travelers: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 20,
+            example: 2,
+            default: 2,
+          },
+          budget: {
+            type: 'string',
+            enum: ['bajo', 'medio', 'alto'],
+            example: 'medio',
+            default: 'medio',
+          },
+          interests: {
+            type: 'array',
+            maxItems: 8,
+            items: { type: 'string' },
+            example: ['café', 'naturaleza'],
+          },
+          notes: {
+            type: 'string',
+            maxLength: 500,
+            example: 'Prefiero actividades tranquilas.',
+          },
+        },
+      },
+      CompareRequest: {
+        type: 'object',
+        required: ['destinationIds'],
+        properties: {
+          destinationIds: {
+            type: 'array',
+            minItems: 2,
+            maxItems: 4,
+            uniqueItems: true,
+            items: { type: 'integer', format: 'int64', minimum: 1 },
+            example: [1, 4],
+          },
+          days: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 15,
+            example: 4,
+            default: 3,
+          },
+          originCity: {
+            type: 'string',
+            example: 'Bogotá',
+            default: 'Bogotá',
+          },
+          travelers: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 20,
+            example: 2,
+            default: 2,
+          },
+          budget: {
+            type: 'string',
+            enum: ['bajo', 'medio', 'alto'],
+            example: 'alto',
+            default: 'medio',
+          },
+          interests: {
+            type: 'array',
+            maxItems: 8,
+            items: { type: 'string' },
+            example: ['playa', 'cultura'],
+          },
+        },
+      },
+      AgentSource: {
+        type: 'object',
+        properties: {
+          sourceType: {
+            type: 'string',
+            enum: ['destination', 'activity', 'external'],
+            example: 'destination',
+          },
+          sourceId: {
+            type: 'integer',
+            format: 'int64',
+            nullable: true,
+            example: 6,
+          },
+          title: { type: 'string', example: 'Salento' },
+          url: {
+            type: 'string',
+            format: 'uri',
+            nullable: true,
+            example: 'https://es.wikipedia.org/wiki/Salento',
+          },
+          provider: {
+            type: 'string',
+            nullable: true,
+            example: 'Open-Meteo',
+          },
+        },
+      },
+      AgentStepResult: {
+        type: 'object',
+        properties: {
+          tool: { type: 'string', example: 'get_weather_forecast' },
+          arguments: {
+            type: 'string',
+            example: '{"destinationId":6,"days":3}',
+          },
+          ok: { type: 'boolean', example: true },
+          error: {
+            type: 'object',
+            nullable: true,
+            additionalProperties: true,
+          },
+          durationMs: { type: 'integer', example: 180 },
+          result: {
+            type: 'object',
+            additionalProperties: true,
+          },
+        },
+      },
+      AgentStep: {
+        type: 'object',
+        properties: {
+          step: { type: 'integer', example: 1 },
+          type: {
+            type: 'string',
+            enum: ['tool_calls', 'final', 'limit'],
+            example: 'tool_calls',
+          },
+          content: { type: 'string', nullable: true },
+          toolCalls: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', example: 'call_1' },
+                name: {
+                  type: 'string',
+                  example: 'get_destination_info',
+                },
+                arguments: {
+                  type: 'string',
+                  example: '{"destinationId":6}',
+                },
+              },
+            },
+          },
+          results: {
+            type: 'array',
+            items: ref('AgentStepResult'),
+          },
+        },
+      },
+      AgentRun: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', format: 'int64', example: 1 },
+          serviceCode: {
+            type: 'string',
+            enum: ['agent_itinerary', 'agent_compare'],
+            example: 'agent_itinerary',
+          },
+          status: {
+            type: 'string',
+            enum: ['running', 'success', 'error', 'partial'],
+            example: 'success',
+          },
+          totalTokens: { type: 'integer', example: 450 },
+          latencyMs: { type: 'integer', nullable: true, example: 1200 },
+          createdAt: { type: 'string', format: 'date-time' },
+          input: {
+            type: 'object',
+            additionalProperties: true,
+          },
+          output: {
+            type: 'object',
+            nullable: true,
+            additionalProperties: true,
+          },
+        },
+      },
+      AgentRunDetail: {
+        allOf: [
+          ref('AgentRun'),
+          {
+            type: 'object',
+            properties: {
+              steps: {
+                type: 'array',
+                items: ref('AgentStep'),
+              },
+            },
+          },
+        ],
+      },
+      AgentUsage: {
+        type: 'object',
+        properties: {
+          promptTokens: { type: 'integer', example: 300 },
+          completionTokens: { type: 'integer', example: 150 },
+          totalTokens: { type: 'integer', example: 450 },
+          latencyMs: { type: 'integer', example: 1200 },
+          model: { type: 'string', example: 'openai/gpt-oss-120b' },
+        },
+      },
+      AgentResponse: {
+        type: 'object',
+        properties: {
+          run: ref('AgentRun'),
+          conversationId: {
+            type: 'integer',
+            format: 'int64',
+            example: 4,
+          },
+          answer: { type: 'string' },
+          sources: {
+            type: 'array',
+            items: ref('AgentSource'),
+          },
+          steps: {
+            type: 'array',
+            items: ref('AgentStep'),
+          },
+          usage: ref('AgentUsage'),
+          quota: ref('Quota'),
+        },
+      },
+      AgentRunListResponse: {
+        type: 'object',
+        properties: {
+          data: {
+            type: 'array',
+            items: ref('AgentRun'),
+          },
+          pagination: ref('Pagination'),
+        },
+      },
+      AgentRunDetailResponse: {
+        type: 'object',
+        properties: {
+          run: ref('AgentRunDetail'),
         },
       },
     },
