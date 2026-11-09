@@ -51,10 +51,10 @@ PROYECTOFINAL/
 │   │   ├── middleware/      # Request ID, errores, JWT, roles y validación
 │   │   ├── errors/          # AppError
 │   │   ├── routes/          # Router principal y health check
-│   │   ├── modules/         # auth, users, catalog, services, usage
-│   │   ├── rag/             # Documentos y sincronización del catálogo con el RAG
+│   │   ├── modules/         # auth, users, catalog, services, usage, chat
+│   │   ├── rag/             # Documentos, sincronización y recuperación FULLTEXT
 │   │   ├── utils/           # JWT, bcrypt y paginación
-│   │   ├── ai/              # Cliente Groq, RAG, prompts (Fase 4+)
+│   │   ├── ai/              # Cliente Groq y normalización de respuestas
 │   │   ├── tools/           # Herramientas de los agentes (Fase 5+)
 │   │   ├── app.js           # Configuración de Express
 │   │   └── server.js        # Arranque y cierre ordenado
@@ -129,6 +129,9 @@ La API está disponible en `http://localhost:4000` y su documentación interacti
 | PATCH | `/api/services/:code` | JWT admin | Edita modelo, temperatura, tokens o prompt |
 | PATCH | `/api/services/:code/status` | JWT admin | Activa o desactiva un servicio de IA |
 | GET | `/api/usage/me` | JWT | Cuota mensual de tokens del usuario |
+| POST | `/api/chat` | JWT | Envía un mensaje al chatbot RAG y descuenta tokens |
+| GET | `/api/chat/conversations` | JWT | Lista las conversaciones del usuario |
+| GET | `/api/chat/conversations/:id` | JWT | Historial y fuentes de una conversación propia |
 
 Características implementadas:
 
@@ -140,13 +143,16 @@ Características implementadas:
 - Sincronización automática del catálogo con los documentos del RAG.
 - Configuración de servicios de IA; el `system_prompt` solo se expone a administradores.
 - Cuota mensual de tokens calculada desde `usage_logs`, con período y fecha de reinicio.
+- Chat RAG con recuperación `FULLTEXT`, fuentes citables y memoria de los últimos mensajes.
+- Historial de conversaciones aislado por usuario, con listado y detalle paginado.
+- Estimación de tokens antes de llamar a Groq, bloqueo por cuota y registro del consumo real.
 - Helmet con Content Security Policy adaptada a Swagger UI.
 - CORS restringido por `CORS_ORIGIN`.
 - Rate limit de 300 solicitudes cada 15 minutos por IP.
 - `X-Request-Id` en todas las respuestas y en los logs de error.
 - Manejo centralizado de errores (404, JSON inválido, errores de MySQL, validación Zod).
 - Arranque y cierre ordenado del servidor y del pool de MySQL.
-- 39 pruebas de integración con Vitest y Supertest.
+- 49 pruebas de integración con Vitest y Supertest (Groq simulado en las pruebas).
 
 ### Autenticación rápida
 
@@ -163,6 +169,25 @@ Invoke-RestMethod -Uri http://localhost:4000/api/users -Headers $headers
 En Postman o en el frontend, el token se envía como
 `Authorization: Bearer <token>`. Los endpoints públicos de catálogo aceptan un token
 opcional: si pertenece a un administrador, muestran también registros inactivos.
+
+Ejemplo de chat:
+
+```powershell
+$body = @{
+  message = 'Quiero visitar Cartagena con niños'
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post `
+  -Uri http://localhost:4000/api/chat `
+  -Headers $headers `
+  -ContentType 'application/json' `
+  -Body $body
+```
+
+Para continuar una conversación, envía también `conversationId`. El historial se
+consulta en `GET /api/chat/conversations` y
+`GET /api/chat/conversations/{id}`. La respuesta real de Groq requiere configurar
+`GROQ_API_KEY` en `server/.env`.
 
 ## Puesta en marcha (local)
 
@@ -275,7 +300,7 @@ La aplicación queda en `http://localhost:5173`.
 | 1 | Base de datos: esquema, datos de prueba, ingesta RAG | ✅ Completada |
 | 2 | Esqueleto de la API, Swagger, manejo de errores | ✅ Completada |
 | 3 | Autenticación, roles, CRUD y configuración de servicios | ✅ Completada |
-| 4 | Chat RAG, memoria, cuotas e historial | ⏳ Pendiente |
+| 4 | Chat RAG, memoria, cuotas e historial | ✅ Completada |
 | 5 | Agentes multi-paso y fuentes externas | ⏳ Pendiente |
 | 6 | Frontend React | ⏳ Pendiente |
 | 7 | Analítica web y Power BI | ⏳ Pendiente |

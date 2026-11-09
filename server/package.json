@@ -1,6 +1,6 @@
 {
   "name": "rutaia-server",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "API REST y servicios de IA de RutaIA",
   "type": "module",

@@ -1,15 +1,18 @@
 # API RutaIA
 
 Backend Express de RutaIA. Implementa autenticación JWT, roles, CRUD de usuarios y
-catálogo, configuración de servicios de IA, cuotas mensuales de tokens, seguridad,
-manejo centralizado de errores, health check y documentación OpenAPI.
+catálogo, configuración de servicios de IA, chat RAG con memoria e historial, cuotas
+mensuales de tokens, seguridad, manejo centralizado de errores, health check y
+documentación OpenAPI.
 
 ## Estado actual
 
-La **Fase 3** está completada. La API ya permite iniciar sesión, administrar usuarios,
-gestionar destinos y actividades, activar o desactivar servicios de IA y consultar la
-cuota mensual de tokens. El chat RAG, los agentes multi-paso y la analítica se agregan
-en las fases siguientes.
+La **Fase 4** está completada. La API ya permite iniciar sesión, administrar usuarios,
+gestionar destinos y actividades, activar o desactivar servicios de IA, consultar la
+cuota mensual y conversar con el chatbot RAG. Las respuestas recuperan contexto del
+catálogo con `FULLTEXT`, mantienen memoria de la conversación, registran las fuentes y
+descuentan los tokens reales. Los agentes multi-paso y la analítica se agregan en las
+fases siguientes.
 
 ## Estructura
 
@@ -28,8 +31,11 @@ server/
 │   │   └── validate.js    # Validación de params, body y query con Zod
 │   ├── errors/
 │   │   └── AppError.js
+│   ├── ai/
+│   │   └── groqClient.js        # Cliente Groq y normalización de la respuesta
 │   ├── rag/
-│   │   └── catalogDocuments.js  # Documentos y sincronización del catálogo
+│   │   ├── catalogDocuments.js  # Documentos y sincronización del catálogo
+│   │   └── retrieval.js         # Recuperación FULLTEXT y contexto para el prompt
 │   ├── routes/
 │   │   ├── index.js
 │   │   └── health.routes.js
@@ -38,6 +44,7 @@ server/
 │   │   ├── users/         # CRUD de usuarios y roles
 │   │   ├── catalog/       # Destinos y actividades
 │   │   ├── services/      # Servicios de IA
+│   │   ├── chat/          # Chat RAG, memoria, historial y fuentes
 │   │   └── usage/         # Cuotas y registro de consumo
 │   ├── utils/
 │   │   ├── jwt.js
@@ -49,7 +56,8 @@ server/
 │   └── ingest.js          # Ingesta de documentos para el RAG
 ├── tests/
 │   ├── api.test.js        # Salud, Swagger y manejo de errores
-│   └── fase3.test.js      # Auth, usuarios, catálogo, servicios y cuotas
+│   ├── fase3.test.js      # Auth, usuarios, catálogo, servicios y cuotas
+│   └── fase4.test.js      # Chat RAG, memoria, historial, cuotas y errores
 ├── vitest.config.js
 ├── .env.example
 └── package.json
@@ -116,6 +124,31 @@ inactivos usando el filtro `active=false` o consultando el detalle.
 Los códigos iniciales son `chat_rag`, `agent_itinerary` y `agent_compare`. El
 `system_prompt` solo se devuelve a administradores.
 
+### Chat RAG
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/api/chat` | JWT | Envía un mensaje y crea la conversación si no se indica `conversationId` |
+| GET | `/api/chat/conversations` | JWT | Lista paginada de conversaciones propias |
+| GET | `/api/chat/conversations/:id` | JWT | Mensajes recientes y fuentes de una conversación propia |
+
+Flujo de una respuesta:
+
+1. Comprueba que el servicio `chat_rag` esté habilitado.
+2. Si se envía `conversationId`, verifica que pertenezca al usuario autenticado.
+3. Recupera hasta 5 documentos del catálogo con `MATCH ... AGAINST` y los últimos
+   10 mensajes de la conversación.
+4. Construye el prompt con el `system_prompt` del servicio, el contexto y la memoria.
+5. Estima los tokens de entrada más el máximo de salida y bloquea con
+   `TOKEN_QUOTA_EXCEEDED` (HTTP 429) si no alcanza la cuota.
+6. Llama a Groq, guarda los mensajes, las fuentes RAG en `messages.sources_json` y el
+   consumo real en `usage_logs`.
+
+Las conversaciones están aisladas por usuario. La respuesta incluye
+`conversation`, `userMessage`, `message`, `sources`, `usage` y la cuota actualizada.
+Si el servicio está desactivado responde `409 SERVICE_DISABLED`; si falta
+`GROQ_API_KEY` responde `503 AI_NOT_CONFIGURED`.
+
 ## Autenticación
 
 ```powershell
@@ -143,10 +176,10 @@ La cuota es mensual y se calcula con los registros `success` de `usage_logs` cuy
 - `limitTokens`, `usedTokens` y `remainingTokens`.
 - `percentUsed`, `exceeded`, `successfulRequests` y `blockedRequests`.
 
-Las funciones `assertQuotaAvailable()` y `recordUsage()` de
-`src/modules/usage/usage.service.js` quedan listas para que el chat y los agentes de
-la Fase 4 estimen el costo antes de llamar a Groq, bloqueen la solicitud con el código
-`TOKEN_QUOTA_EXCEEDED` y registren el consumo real después de la llamada.
+El chat usa `assertQuotaAvailable()` antes de llamar a Groq y `recordUsage()` después
+de la llamada. Las solicitudes bloqueadas se guardan con estado `blocked` y las fallas
+del proveedor con estado `error`, sin sumar tokens a la cuota. Los agentes de la Fase 5
+reutilizarán el mismo mecanismo.
 
 ## Seguridad y validación
 
@@ -180,7 +213,7 @@ Copy-Item .env.example .env
 npm install
 npm run db:ingest   # requiere MySQL arriba
 npm run dev         # http://localhost:4000
-npm test            # Vitest + Supertest (39 pruebas)
+npm test            # Vitest + Supertest (49 pruebas)
 npm start           # producción
 ```
 
@@ -189,8 +222,9 @@ npm start           # producción
 - Health check: <http://localhost:4000/api/health>
 
 Las pruebas usan la misma base local configurada en `server/.env` y crean registros
-con prefijo `TEST_Fase3_`; al final los eliminan. No ejecutes `npm test` contra una
-base de producción.
+temporales con prefijos `TEST_Fase3_` y `TEST_Fase4_`; al final los eliminan. Las
+pruebas del chat simulan Groq, por lo que no consumen tokens ni necesitan una
+`GROQ_API_KEY` real. No ejecutes `npm test` contra una base de producción.
 
 ## Variables de entorno
 
@@ -200,8 +234,6 @@ al repositorio. Antes de desplegar, cambia `JWT_SECRET` por un valor largo y ale
 
 ## Próximas fases
 
-- **Fase 4:** chat RAG con memoria, historial de conversaciones, bloqueo por cuota y
-  registro real de tokens.
 - **Fase 5:** agentes multi-paso con herramientas internas y fuentes externas.
 - **Fase 6:** frontend React.
 - **Fase 7:** analítica web y Power BI.

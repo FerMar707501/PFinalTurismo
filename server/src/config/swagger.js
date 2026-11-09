@@ -67,7 +67,7 @@ export const openapiSpec = {
     description:
       'API REST de RutaIA: autenticación JWT, gestión de usuarios y roles, ' +
       'catálogo turístico, servicios de IA configurables, cuotas mensuales de ' +
-      'tokens y base para el chatbot RAG y los agentes de viaje.',
+      'tokens, chatbot RAG con memoria e historial y base para los agentes de viaje.',
     license: {
       name: 'Proyecto académico — Programación Comercial',
     },
@@ -102,6 +102,11 @@ export const openapiSpec = {
     {
       name: 'Servicios IA',
       description: 'Configuración y activación de los servicios de IA',
+    },
+    {
+      name: 'Chat',
+      description:
+        'Chatbot RAG con recuperación en el catálogo, memoria e historial',
     },
     {
       name: 'Consumo',
@@ -428,6 +433,72 @@ export const openapiSpec = {
         responses: {
           200: response('Estado actualizado', 'AiService'),
           ...commonErrors,
+        },
+      },
+    },
+    '/chat': {
+      post: {
+        tags: ['Chat'],
+        summary: 'Enviar mensaje al chatbot RAG',
+        description:
+          'Recupera contexto relevante del catálogo, incorpora la memoria de la conversación y descuenta los tokens reales de la cuota mensual. Si no se envía conversationId, se crea una conversación nueva.',
+        security: bearer,
+        requestBody: requestBody('ChatRequest'),
+        responses: {
+          201: response('Respuesta del chatbot', 'ChatResponse'),
+          400: errorResponse('Mensaje inválido'),
+          401: errorResponse('No autenticado'),
+          403: errorResponse('Usuario inactivo'),
+          404: errorResponse('Conversación no encontrada'),
+          409: errorResponse('Servicio de chat desactivado'),
+          429: errorResponse('Cuota mensual de tokens agotada'),
+          502: errorResponse('Error del proveedor de IA'),
+          503: errorResponse('Servicio de IA no configurado o saturado'),
+        },
+      },
+    },
+    '/chat/conversations': {
+      get: {
+        tags: ['Chat'],
+        summary: 'Listar mis conversaciones',
+        description:
+          'Devuelve únicamente las conversaciones del usuario autenticado, con el número de mensajes y el último mensaje.',
+        security: bearer,
+        parameters: paginationParams,
+        responses: {
+          200: response(
+            'Conversaciones del usuario',
+            'ConversationListResponse',
+          ),
+          401: errorResponse('No autenticado'),
+          403: errorResponse('Usuario inactivo'),
+        },
+      },
+    },
+    '/chat/conversations/{id}': {
+      get: {
+        tags: ['Chat'],
+        summary: 'Consultar una conversación',
+        description:
+          'Devuelve los mensajes recientes de una conversación propia, incluyendo las fuentes RAG utilizadas por las respuestas del asistente.',
+        security: bearer,
+        parameters: [
+          pathParam('id', 'ID de la conversación'),
+          queryParam('limit', 'Mensajes recientes a devolver', {
+            type: 'integer',
+            minimum: 1,
+            maximum: 100,
+            default: 50,
+          }),
+        ],
+        responses: {
+          200: response(
+            'Detalle de la conversación',
+            'ConversationDetailResponse',
+          ),
+          401: errorResponse('No autenticado'),
+          403: errorResponse('Usuario inactivo'),
+          404: errorResponse('Conversación no encontrada'),
         },
       },
     },
@@ -936,6 +1007,136 @@ export const openapiSpec = {
         required: ['enabled'],
         properties: {
           enabled: { type: 'boolean', example: true },
+        },
+      },
+      ChatRequest: {
+        type: 'object',
+        required: ['message'],
+        properties: {
+          message: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 4000,
+            example: 'Quiero visitar Cartagena con niños',
+          },
+          conversationId: {
+            type: 'integer',
+            format: 'int64',
+            minimum: 1,
+            description:
+              'Conversación existente del usuario. Si se omite, se crea una nueva.',
+          },
+        },
+      },
+      ChatSource: {
+        type: 'object',
+        properties: {
+          documentId: { type: 'integer', format: 'int64', example: 1 },
+          sourceType: {
+            type: 'string',
+            example: 'destination',
+            enum: ['destination', 'activity', 'manual', 'external'],
+          },
+          sourceId: {
+            type: 'integer',
+            format: 'int64',
+            nullable: true,
+            example: 5,
+          },
+          title: {
+            type: 'string',
+            example: 'Cartagena de Indias',
+          },
+          score: { type: 'number', example: 8.215 },
+        },
+      },
+      ChatMessage: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', format: 'int64', example: 10 },
+          conversationId: {
+            type: 'integer',
+            format: 'int64',
+            example: 4,
+          },
+          role: {
+            type: 'string',
+            enum: ['user', 'assistant'],
+            example: 'assistant',
+          },
+          content: { type: 'string' },
+          sources: {
+            type: 'array',
+            items: ref('ChatSource'),
+          },
+          tokensIn: { type: 'integer', example: 120 },
+          tokensOut: { type: 'integer', example: 80 },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      ChatConversation: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', format: 'int64', example: 4 },
+          title: {
+            type: 'string',
+            nullable: true,
+            example: 'Quiero visitar Cartagena con niños',
+          },
+          serviceCode: { type: 'string', example: 'chat_rag' },
+          lastMessageAt: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true,
+          },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          messageCount: { type: 'integer', example: 4 },
+          lastMessage: { type: 'string' },
+        },
+      },
+      ChatUsage: {
+        type: 'object',
+        properties: {
+          promptTokens: { type: 'integer', example: 120 },
+          completionTokens: { type: 'integer', example: 80 },
+          totalTokens: { type: 'integer', example: 200 },
+          latencyMs: { type: 'integer', example: 842 },
+          model: { type: 'string', example: 'openai/gpt-oss-120b' },
+        },
+      },
+      ChatResponse: {
+        type: 'object',
+        properties: {
+          conversation: ref('ChatConversation'),
+          userMessage: ref('ChatMessage'),
+          message: ref('ChatMessage'),
+          sources: {
+            type: 'array',
+            items: ref('ChatSource'),
+          },
+          usage: ref('ChatUsage'),
+          quota: ref('Quota'),
+        },
+      },
+      ConversationListResponse: {
+        type: 'object',
+        properties: {
+          data: {
+            type: 'array',
+            items: ref('ChatConversation'),
+          },
+          pagination: ref('Pagination'),
+        },
+      },
+      ConversationDetailResponse: {
+        type: 'object',
+        properties: {
+          conversation: ref('ChatConversation'),
+          messages: {
+            type: 'array',
+            items: ref('ChatMessage'),
+          },
         },
       },
     },

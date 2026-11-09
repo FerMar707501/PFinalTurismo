@@ -83,24 +83,27 @@ export async function assertQuotaAvailable(user, estimatedTokens = 0) {
   return quota;
 }
 
-export async function recordUsage({
-  userId,
-  serviceCode,
-  conversationId = null,
-  messageId = null,
-  model,
-  promptTokens = 0,
-  completionTokens = 0,
-  totalTokens,
-  latencyMs = null,
-  status = 'success',
-  errorCode = null,
-}) {
+export async function recordUsage(
+  {
+    userId,
+    serviceCode,
+    conversationId = null,
+    messageId = null,
+    model,
+    promptTokens = 0,
+    completionTokens = 0,
+    totalTokens,
+    latencyMs = null,
+    status = 'success',
+    errorCode = null,
+  },
+  executor = pool,
+) {
   const prompt = Math.max(0, Number(promptTokens) || 0);
   const completion = Math.max(0, Number(completionTokens) || 0);
   const total = Math.max(0, Number(totalTokens ?? prompt + completion) || 0);
 
-  const [result] = await pool.execute(
+  const [result] = await executor.execute(
     `INSERT INTO usage_logs
        (user_id, service_code, conversation_id, message_id, model,
         prompt_tokens, completion_tokens, total_tokens, latency_ms,
