@@ -1,111 +1,145 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --bg: #f4f6f2;
+  --bg-soft: #eef2ec;
+  --surface: #ffffff;
+  --surface-strong: #f9fbf8;
+  --ink: #172a27;
+  --ink-soft: #334a45;
+  --muted: #697a74;
+  --muted-light: #8b9a94;
+  --line: #dfe7e2;
+  --line-strong: #cbd7d1;
+  --brand: #0f766e;
+  --brand-dark: #0b5b55;
+  --brand-light: #d9f2ed;
+  --brand-ink: #063d39;
+  --amber: #d97706;
+  --amber-light: #fef0d5;
+  --coral: #dc5a45;
+  --coral-light: #fde5e0;
+  --navy: #133a36;
+  --navy-soft: #1b4a44;
+  --danger: #b42318;
+  --danger-light: #fde8e6;
+  --success: #15803d;
+  --success-light: #dcfce7;
+  --shadow-sm: 0 1px 2px rgba(23, 42, 39, 0.05);
+  --shadow-md: 0 12px 32px rgba(23, 42, 39, 0.09);
+  --shadow-lg: 0 28px 70px rgba(23, 42, 39, 0.16);
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --sans: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto,
+    'Helvetica Neue', sans-serif;
+  --display: Georgia, 'Times New Roman', serif;
+  --mono: 'Cascadia Code', Consolas, 'Courier New', monospace;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
+  color-scheme: light;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink);
   background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+html {
+  min-width: 320px;
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--bg);
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+  min-height: 100vh;
 }
 
 h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
+h2,
+h3,
+h4,
+h5,
+h6,
 p {
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+h1,
+h2,
+h3,
+h4 {
+  color: var(--ink);
+  line-height: 1.15;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+h1 {
+  font-family: var(--display);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img,
+svg {
+  display: block;
+}
+
+ul,
+ol {
+  margin: 0;
+}
+
+::selection {
+  background: var(--brand-light);
+  color: var(--brand-ink);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c4d1cb;
+  border-radius: 999px;
+  border: 3px solid var(--bg);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
 }

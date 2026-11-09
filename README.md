@@ -293,6 +293,48 @@ npm run dev
 
 La aplicación queda en `http://localhost:5173`.
 
+#### Interfaz web
+
+El frontend incluye:
+
+- **Login** con JWT, sesión persistida y cuentas de demostración.
+- **Inicio** con resumen del catálogo, servicios activos, cuota y últimas ejecuciones.
+- **Explorar destinos**: búsqueda, filtros por región, categoría y precio, paginación
+  y ficha con actividades.
+- **Chat RAG**: historial de conversaciones, memoria, fuentes citadas y bloques
+  Markdown/tablas.
+- **Itinerario y comparador**: formularios de los dos agentes, visualización de pasos,
+  herramientas, fuentes y consumo real.
+- **Historial de agentes** con filtros, detalle de entrada, respuesta y trazabilidad.
+- **Mi consumo**: anillo de cuota, saldo, solicitudes exitosas/bloqueadas y reglas.
+- **Administración** (solo `admin`): usuarios y cuotas, destinos, actividades y
+  configuración/activación de los servicios de IA.
+
+Navegación por hash (`#/dashboard`, `#/catalog`, `#/chat`, `#/itinerary`, `#/compare`,
+`#/runs`, `#/usage`, `#/admin`), por lo que funciona en hosting estático sin reglas de
+reescritura adicionales.
+
+Para verificar el frontend contra la API local:
+
+```powershell
+cd client
+npm run build
+npm run preview -- --host 127.0.0.1 --port 4173
+```
+
+> El navegador debe poder acceder a `http://localhost:4000`. En un despliegue real,
+> configura `VITE_API_URL` con la URL pública de la API y su origen en `CORS_ORIGIN`.
+
+Para pruebas visuales automatizadas hay un script CDP que inicia sesión y recorre todas
+las vistas, generando capturas en `qa-screens/`:
+
+```powershell
+# Requiere Edge/Chrome con --remote-debugging-port=9222 y el preview en 4173
+node scripts/qa-frontend.mjs
+```
+
+
+
 ---
 
 ## Variables de entorno
@@ -334,7 +376,7 @@ La aplicación queda en `http://localhost:5173`.
 | 3 | Autenticación, roles, CRUD y configuración de servicios | ✅ Completada |
 | 4 | Chat RAG, memoria, cuotas e historial | ✅ Completada |
 | 5 | Agentes multi-paso, herramientas y fuentes externas | ✅ Completada |
-| 6 | Frontend React | ⏳ Pendiente |
+| 6 | Frontend React: catálogo, chat, agentes, cuotas y administración | ✅ Completada |
 | 7 | Analítica web y Power BI | ⏳ Pendiente |
 | 8 | Pruebas, Swagger y Postman | ⏳ Pendiente |
 | 9 | Despliegue y CI/CD | ⏳ Pendiente |
