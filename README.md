@@ -67,6 +67,26 @@ PROYECTOFINAL/
 
 ---
 
+## Modelo de datos
+
+MySQL 8.4 con `utf8mb4_spanish_ci` y almacenamiento en UTC. El detalle está en
+[`db/README.md`](db/README.md) y el DDL completo en [`db/schema.sql`](db/schema.sql).
+
+| Tabla | Propósito |
+|---|---|
+| `users` | Usuarios, roles y cuota mensual de tokens |
+| `destinations` / `activities` | Catálogo turístico administrable |
+| `documents` | Fragmentos indexados con `FULLTEXT` para el RAG |
+| `ai_services` | Configuración de los tres servicios de IA |
+| `conversations` / `messages` | Historial del chatbot y de los agentes |
+| `usage_logs` | Hechos de consumo para la analítica y Power BI |
+| `agent_runs` | Traza de pasos de cada ejecución de agente |
+| `api_clients` | API keys con hash para consumidores externos |
+| `external_cache` | Caché de Open-Meteo, OSRM y Wikipedia |
+
+Datos iniciales: 3 usuarios, 12 destinos, 48 actividades, 3 servicios de IA,
+3 conversaciones, 6 mensajes, 22 registros de consumo y 60 documentos para el RAG.
+
 ## Puesta en marcha (local)
 
 ### 1. Variables de entorno
@@ -92,6 +112,14 @@ docker compose ps
 - Usuario: `rutaia`
 - Contraseña: `rutaia_local_dev`
 
+Credenciales de demostración:
+
+| Rol | Correo | Contraseña | Cuota mensual |
+|---|---|---|---|
+| Administrador | `admin@rutaia.local` | `Admin123!` | 500.000 tokens |
+| Usuario | `demo@rutaia.local` | `Demo123!` | 50.000 tokens |
+| Usuario | `maria@rutaia.local` | `Demo123!` | 30.000 tokens |
+
 Los scripts `db/schema.sql` y `db/seed.sql` se ejecutan automáticamente **solo la primera
 vez** que se crea el volumen. Si los modificas:
 
@@ -107,6 +135,7 @@ docker compose up -d
 ```powershell
 cd server
 npm install
+npm run db:ingest   # genera los 60 documentos del RAG (requiere MySQL arriba)
 npm run dev
 ```
 
@@ -158,7 +187,7 @@ La aplicación queda en `http://localhost:5173`.
 | Fase | Descripción | Estado |
 |---|---|---|
 | 0 | Preparación: repo, estructura, Docker, entorno, README | ✅ Completada |
-| 1 | Base de datos: esquema, datos de prueba, ingesta RAG | ⏳ Pendiente |
+| 1 | Base de datos: esquema, datos de prueba, ingesta RAG | ✅ Completada |
 | 2 | Esqueleto de la API, Swagger, manejo de errores | ⏳ Pendiente |
 | 3 | Autenticación, roles, CRUD y configuración de servicios | ⏳ Pendiente |
 | 4 | Chat RAG, memoria, cuotas e historial | ⏳ Pendiente |
