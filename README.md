@@ -233,7 +233,6 @@ con OSRM y el contexto de Wikipedia. La respuesta incluye `answer`, `sources`, `
 `usage` y `quota`; el historial se consulta en `GET /api/agents/runs`.
 
 ## Puesta en marcha (local)
-
 ### 1. Variables de entorno
 
 ```powershell
@@ -281,6 +280,7 @@ docker compose up -d
 cd server
 npm install
 npm run db:ingest   # genera los 60 documentos del RAG (requiere MySQL arriba)
+npm run db:setup -- --force   # recrea base y seed con el cliente mysql (opcional)
 npm run dev
 ```
 
@@ -404,7 +404,6 @@ node scripts/qa-frontend.mjs
 ---
 
 ## Estado del proyecto
-
 | Fase | Descripción | Estado |
 |---|---|---|
 | 0 | Preparación: repo, estructura, Docker, entorno, README | ✅ Completada |
@@ -415,9 +414,9 @@ node scripts/qa-frontend.mjs
 | 5 | Agentes multi-paso, herramientas y fuentes externas | ✅ Completada |
 | 6 | Frontend React: catálogo, chat, agentes, cuotas y administración | ✅ Completada |
 | 7 | Analítica web, Power BI y API externa con API key | ✅ Completada |
-| 8 | Pruebas, Swagger y Postman | 🚧 En curso |
-| 9 | Despliegue y CI/CD | ⏳ Pendiente |
-| 10 | Documentación final y demostración | ⏳ Pendiente |
+| 8 | Pruebas, Swagger y Postman | ✅ Completada |
+| 9 | Despliegue en la nube y CI/CD | ✅ Automatización lista |
+| 10 | Documentación final y demostración | 🚧 En curso |
 
 ---
 

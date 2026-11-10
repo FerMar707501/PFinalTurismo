@@ -1,0 +1,219 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  CI: 'true'
+
+jobs:
+  backend:
+    name: Backend · pruebas y migración
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root_ci
+          MYSQL_DATABASE: rutaia
+          MYSQL_USER: rutaia
+          MYSQL_PASSWORD: rutaia_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot_ci --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Preparar entorno de pruebas
+        run: |
+          cat > .env <<'EOF'
+          NODE_ENV=test
+          PORT=4000
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_USER=rutaia
+          DB_PASSWORD=rutaia_ci
+          DB_NAME=rutaia
+          DB_CONNECTION_LIMIT=10
+          JWT_SECRET=secreto_de_ci_con_mas_de_32_caracteres
+          JWT_EXPIRES_IN=1h
+          GROQ_API_KEY=
+          GROQ_MODEL=openai/gpt-oss-120b
+          GROQ_MODEL_LITE=openai/gpt-oss-20b
+          GROQ_MAX_TOKENS=1024
+          GROQ_TEMPERATURE=0.2
+          CORS_ORIGIN=http://localhost:5173
+          TOKEN_QUOTA_DEFAULT=50000
+          EOF
+
+      - name: Aplicar esquema y datos de demostración
+        env:
+          MYSQL_PWD: rutaia_ci
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -u rutaia rutaia < ../db/schema.sql
+          mysql -h 127.0.0.1 -P 3306 -u rutaia rutaia < ../db/seed.sql
+
+      - name: Ingesta del RAG
+        run: npm run db:ingest
+
+      - name: Pruebas de integración
+        run: npm test
+
+      - name: Verificar que la API arranca en producción
+        run: |
+          NODE_ENV=production node src/server.js &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4000/api/health > /dev/null; then
+              kill $SERVER_PID
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "La API no respondió a tiempo"
+          kill $SERVER_PID || true
+          exit 1
+
+  frontend:
+    name: Frontend · build y lint
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build de producción
+        run: npm run build
+        env:
+          VITE_API_URL: http://localhost:4000/api
+
+      - name: Guardar artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: rutaia-client-dist
+          path: client/dist
+          retention-days: 7
+
+  deploy:
+    name: Despliegue
+    needs: [backend, frontend]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: ¿Hay servicios de despliegue configurados?
+        id: targets
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          backend=false
+          frontend=false
+          if [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID" ]; then backend=true; fi
+          if [ -n "$VERCEL_TOKEN" ]; then frontend=true; fi
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "Backend: $backend · Frontend: $frontend"
+
+      - name: Desplegar API en Render
+        if: steps.targets.outputs.backend == 'true'
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          curl --fail --silent --show-error \
+            -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{\"clearCache\":\"do_not_clear\"}" > /dev/null
+          echo "Despliegue solicitado a Render."
+
+      - name: Esperar a que Render publique la API
+        if: steps.targets.outputs.backend == 'true'
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          API_URL: ${{ secrets.RENDER_API_URL }}
+        run: |
+          for i in $(seq 1 40); do
+            STATUS=$(curl --silent "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys?limit=1" \
+              -H "Authorization: Bearer ${RENDER_API_KEY}" | \
+              node -e "let d='';process.stdin.on('data',(c)=>d+=c).on('end',()=>{try{const j=JSON.parse(d);console.log(j[0]?.deploy?.status ?? 'pending')}catch{console.log('pending')}})")
+            echo "Estado del despliegue: $STATUS"
+            if [ "$STATUS" = "live" ]; then
+              cd "$GITHUB_WORKSPACE"
+              node scripts/smoke-api.mjs "$API_URL"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "El despliegue no alcanzó el estado live."
+          exit 1
+
+      - name: Publicar frontend en Vercel
+        if: steps.targets.outputs.frontend == 'true'
+        working-directory: client
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
+          npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+      - name: Resumen
+        run: |
+          echo "### Despliegue RutaIA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Backend configurado: ${{ steps.targets.outputs.backend }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Frontend configurado: ${{ steps.targets.outputs.frontend }}" >> "$GITHUB_STEP_SUMMARY"

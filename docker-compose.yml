@@ -33,6 +33,48 @@ services:
       retries: 30
       start_period: 30s
 
+  # API en contenedor (opcional). Útil para probar el despliegue en local:
+  #   docker compose --profile full up -d --build
+  api:
+    profiles: ["full"]
+    build:
+      context: ./server
+    container_name: rutaia-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: ${MYSQL_USER:-rutaia}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-rutaia_local_dev}
+      DB_NAME: ${MYSQL_DATABASE:-rutaia}
+      DB_CONNECTION_LIMIT: 10
+      JWT_SECRET: ${JWT_SECRET:-cambia_este_secreto_por_uno_largo_y_aleatorio}
+      JWT_EXPIRES_IN: 1h
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      GROQ_MODEL_LITE: ${GROQ_MODEL_LITE:-openai/gpt-oss-20b}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      TOKEN_QUOTA_DEFAULT: ${TOKEN_QUOTA_DEFAULT:-50000}
+    ports:
+      - "${API_PORT:-4000}:4000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
 volumes:
   mysql_data:
     name: rutaia_mysql_data

@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: rutaia-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: server
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: 3306
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        value: rutaia
+      - key: DB_CONNECTION_LIMIT
+        value: 10
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 1h
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: GROQ_MODEL_LITE
+        value: openai/gpt-oss-20b
+      - key: CORS_ORIGIN
+        sync: false
+      - key: TOKEN_QUOTA_DEFAULT
+        value: 50000

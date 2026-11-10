@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:seed": "node scripts/seed.js",
-    "db:ingest": "node scripts/ingest.js"
+    "db:ingest": "node scripts/ingest.js",
+    "db:setup": "node scripts/setup-db.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
