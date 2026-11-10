@@ -330,6 +330,17 @@ VALUES
 
 
 -- ------------------------------------------------------------
+-- Cliente de API para Power BI (scope de solo lectura)
+-- La misma clave está documentada en powerbi/README.md
+-- ------------------------------------------------------------
+INSERT INTO api_clients
+  (id, name, key_hash, key_prefix, scope, active)
+VALUES
+  (1, 'Power BI · Consumo IA',
+   'e5c81722faf39b39b3bde3473171f89c3e413a2cc795e931e982c090b409c819',
+   'rutaia_ce9e', 'analytics:read', TRUE);
+
+-- ------------------------------------------------------------
 -- Sincroniza las secuencias IDENTITY con los IDs insertados
 -- ------------------------------------------------------------
 SELECT setval(pg_get_serial_sequence('users', 'id'),
@@ -346,3 +357,5 @@ SELECT setval(pg_get_serial_sequence('messages', 'id'),
               COALESCE((SELECT MAX(id) FROM messages), 1));
 SELECT setval(pg_get_serial_sequence('usage_logs', 'id'),
               COALESCE((SELECT MAX(id) FROM usage_logs), 1));
+SELECT setval(pg_get_serial_sequence('api_clients', 'id'),
+              COALESCE((SELECT MAX(id) FROM api_clients), 1));
