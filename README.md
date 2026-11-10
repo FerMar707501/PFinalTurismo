@@ -4,7 +4,21 @@ Aplicación web con servicios de Inteligencia Artificial: chatbot con RAG, dos a
 multi-paso, autenticación por roles, control de consumo de tokens, API REST documentada,
 reporte web y reporte de Power BI.
 
-**Stack:** React + Vite · Express · MySQL 8 · Groq (tool calling) · Docker · GitHub Actions.
+**Stack:** React + Vite · Express · PostgreSQL 16 · Groq (tool calling) · Docker · GitHub Actions.
+
+## Enlaces de la entrega (producción)
+
+| Recurso | URL |
+|---|---|
+| **Aplicación web** | https://rutaia-api-q3y2.onrender.com |
+| **Swagger / API docs** | https://rutaia-api-q3y2.onrender.com/api-docs |
+| **API (JSON OpenAPI)** | https://rutaia-api-q3y2.onrender.com/api/docs.json |
+| **Power BI** | `GET https://rutaia-api-q3y2.onrender.com/api/bi/usage` con cabecera `X-API-Key: demo-bi-key-123` |
+| **Health check** | https://rutaia-api-q3y2.onrender.com/api/health |
+
+- Usuarios demo: `admin@rutaia.local` / `Admin123!` y `demo@rutaia.local` / `Demo123!`.
+- El plan gratuito de Render suspende el servicio tras 15 minutos sin tráfico; la
+  primera petición puede tardar ~50 s en despertarlo.
 
 ---
 
