@@ -1,50 +1,89 @@
 # Power BI · RutaIA
 
-El reporte de Power BI consume el mismo agregado que el panel web de analítica:
+El reporte de Power BI consume el mismo agregado que el panel web de analítica.
+
+**Conexión de la entrega (producción):**
 
 ```text
-GET /api/external/analytics/usage?from=YYYY-MM-DD&to=YYYY-MM-DD&serviceCode=CODIGO
-Cabecera: X-API-Key: rutaia_...
+URL:      https://rutaia-api-q3y2.onrender.com/api/bi/usage?from=2026-01-01&to=2026-12-31
+Cabecera: X-API-Key: demo-bi-key-123
 ```
 
-El endpoint usa una API key creada por un administrador en **Analítica y Power BI →
-Conectar Power BI**. La clave solo se muestra una vez.
+`/api/bi/usage` es un alias de `/api/external/analytics/usage`; ambos devuelven la
+misma estructura `{ meta, totals, byService, byUser, daily, monthly }`.
 
-## 1. Crear la clave
+La clave `demo-bi-key-123` ya está registrada en la base (solo se guarda su
+SHA-256). Para crear otra, un administrador puede usar **Analítica y Power BI →
+Conectar Power BI** o la API.
 
-1. Inicia sesión como `admin@rutaia.local`.
-2. Abre **Conectar Power BI** en el menú lateral.
-3. Escribe un nombre, pulsa **Generar API key** y copia la clave.
+---
 
-También se puede crear por API:
+## Paso a paso para generar `reporte_rutaia.pbix` (5 minutos)
 
-```powershell
-$login = Invoke-RestMethod -Method Post `
-  -Uri http://localhost:4000/api/auth/login `
-  -ContentType 'application/json' `
-  -Body (@{ email = 'admin@rutaia.local'; password = 'Admin123!' } | ConvertTo-Json)
+> Un `.pbix` solo puede escribirlo Power BI Desktop: su `DataModel` interno usa
+> compresión XPress9, propietaria de Microsoft. Ninguna herramienta externa puede
+> generarlo, por eso el repositorio incluye el modelo y la consulta listos.
 
-$clave = Invoke-RestMethod -Method Post `
-  -Uri http://localhost:4000/api/analytics/clients `
-  -Headers @{ Authorization = "Bearer $($login.token)" } `
-  -ContentType 'application/json' `
-  -Body (@{ name = 'Power BI · Consumo IA' } | ConvertTo-Json)
+### 1. Abrir Power BI Desktop y conectar
 
-$clave.apiKey
+1. **Inicio → Obtener datos → Web**.
+2. En **Básico** pega:
+   `https://rutaia-api-q3y2.onrender.com/api/bi/usage?from=2026-01-01&to=2026-12-31`
+3. Pulsa **Avanzado** y agrega la cabecera:
+
+   | Nombre | Valor |
+   |---|---|
+   | `X-API-Key` | `demo-bi-key-123` |
+
+4. **Aceptar**.
+
+### 2. Crear las cinco tablas
+
+Power BI deja un registro con `meta`, `totals`, `byService`, `byUser`, `daily` y
+`monthly`. Para cada tabla:
+
+1. **Transformar datos** para abrir Power Query.
+2. **Nueva consulta → Consulta en blanco → Editor avanzado**.
+3. Pega la consulta de la sección *Consultas M* de este documento cambiando la
+   última línea (`in totales`, `in servicios`, `in usuarios`, `in diario`,
+   `in mensual`).
+4. **Cerrar y aplicar** y renombra cada consulta como se indica.
+
+Las columnas vienen tipadas; no hace falta expandir registros a mano.
+
+### 3. Crear las visualizaciones
+
+| Página | Visual | Campos |
+|---|---|---|
+| Consumo de IA | 4 tarjetas | `totalTokens`, `requests`, `successRate`, `averageLatencyMs` |
+| Servicios y usuarios | Anillo + tabla | `Servicios[serviceCode]`, `Servicios[totalTokens]`, `Usuarios[name]`, `Usuarios[totalTokens]` |
+| Evolución | Línea + columnas | `Diario[date]`, `Diario[totalTokens]`, `Mensual[month]` |
+
+Medidas DAX útiles (ya vienen en `powerbi/modelo/`):
+
+```dax
+Total de tokens = SUM ( Totales[totalTokens] )
+Solicitudes = SUM ( Totales[requests] )
+Tasa de éxito = DIVIDE ( SUM ( Totales[successfulRequests] ), SUM ( Totales[requests] ) )
+Latencia media = AVERAGE ( Totales[averageLatencyMs] )
+Promedio diario de tokens = DIVIDE ( SUM ( Totales[totalTokens] ), COUNTROWS ( Diario ) )
 ```
 
-## 2. Conectar Power BI Desktop
+### 4. Guardar
 
-### Opción rápida (consulta M lista)
+**Archivo → Guardar como** → `powerbi/reporte_rutaia.pbix`.
 
-Abre **Inicio → Transformar datos → Nueva consulta → Consulta en blanco → Editor
-avanzado**, pega esta consulta y sustituye `rutaia_...` por la clave real
-(se generan las cinco tablas del modelo):
+---
+
+## Consultas M
+
+Reemplaza `in totales` por `in servicios`, `in usuarios`, `in diario` o
+`in mensual` para las otras tablas.
 
 ```m
 let
     url = "https://rutaia-api-q3y2.onrender.com/api/bi/usage?from=2026-01-01&to=2026-12-31",
-    respuesta = Web.Contents(url, [Headers = [#"X-API-Key" = "rutaia_..."]]),
+    respuesta = Web.Contents(url, [Headers = [#"X-API-Key" = "demo-bi-key-123"]]),
     json = Json.Document(respuesta),
 
     totales = #table(
@@ -60,81 +99,14 @@ in
     totales
 ```
 
-Repite la consulta cambiando solo la última línea (`in servicios`, `in usuarios`,
-`in diario`, `in mensual`) para obtener las otras cuatro tablas. Cada una se
-convierte en una consulta independiente del modelo.
+## Modelo TMDL
 
-El modelo TMDL equivalente está en `powerbi/modelo/` (tablas `Totales`,
-`Servicios`, `Usuarios`, `Diario` y `Mensual`, con las medidas DAX ya definidas).
+`powerbi/modelo/` contiene las cinco tablas (`Totales`, `Servicios`, `Usuarios`,
+`Diario`, `Mensual`), sus columnas y las medidas DAX. Se regenera con:
 
-### Opción manual (paso a paso)
-
-1. **Obtener datos → Web**.
-2. URL avanzada (ejemplo):
-   `https://rutaia-api-q3y2.onrender.com/api/bi/usage?from=2026-01-01&to=2026-12-31`
-3. En **Encabezados HTTP**, agrega `X-API-Key` con la clave.
-4. Al cargar, Power BI recibe un único registro con:
-
-| Campo | Uso sugerido |
-|---|---|
-| `meta` | Rango consultado y fecha de generación |
-| `totals` | KPIs: solicitudes, tokens, tasa de éxito, latencia |
-| `byService` | Gráfico de anillos y tabla por servicio |
-| `byUser` | Ranking de consumo por usuario |
-| `daily` | Serie de tokens y solicitudes por día |
-| `monthly` | Comparación mensual |
-
-5. En Power Query usa **Convertir en tabla** y después expande `byService`,
-   `byUser`, `daily` y `monthly`. Renombra las consultas y define relaciones por
-   `serviceCode` y `userId` si quieres un modelo en estrella.
-
-Para una tabla plana (fecha, servicio, modelo, usuario, estado, tokens y latencia)
-descarga el CSV del panel web: `GET /api/analytics/usage.csv` con el JWT del
-administrador. Ese CSV también se puede cargar con **Obtener datos → Texto/CSV**.
-
-### Guardar el archivo de entrega
-
-El `.pbix` **solo lo puede generar Power BI Desktop**: el modelo interno usa
-compresión XPress9, propietaria de Microsoft, y ninguna herramienta externa
-(`pbi-tools`, script propio) puede escribirla. Los pasos son:
-
-1. Con el modelo cargado, **Archivo → Guardar como**.
-2. Guarda en `powerbi/reporte_rutaia.pbix`.
-3. Cierra Power BI y confirma que el archivo existe.
-
-El script `node scripts/open-pbi-report.mjs` deja la API key en el portapapeles,
-muestra la URL y los pasos, y abre Power BI Desktop para agilizar el proceso.
-
-> Los `.pbit` y `.pbix` generados por herramientas externas no abren en Power BI
-> porque su `DataModel` no usa la compresión esperada.
-
-## 3. Medidas DAX sugeridas
-
-```dax
-Total tokens = SUM(daily[totalTokens])
-Solicitudes = SUM(daily[requests])
-Tasa de éxito =
-    DIVIDE(
-        SUM(daily[successfulRequests]),
-        [Solicitudes]
-    )
-Tokens promedio por solicitud = DIVIDE([Total tokens], [Solicitudes])
-Latencia promedio (ms) = AVERAGE(byService[averageLatencyMs])
+```powershell
+node scripts/build-pbit.mjs https://rutaia-api-q3y2.onrender.com/api/bi/usage
 ```
 
-> Ajusta los nombres de tabla y columna a los que asignes en Power Query. La tasa
-> de éxito también está calculada en `totals.successRate` por si se prefiere usar el
-> valor del API directamente.
-
-## 4. Validación
-
-El archivo `reporte_rutaia.pbix` debe incluir las mismas cifras que la pestaña
-**Analítica** del frontend porque ambas leen el mismo agregado. Para el rango
-`2026-10-11 → 2026-11-09` con los datos de demostración:
-
-- 22 solicitudes
-- 22.640 tokens
-- 90,91 % de éxito
-- 1.619 ms de latencia promedio
-
-Las capturas del reporte se guardan en `docs/capturas/`.
+Valores de control (últimos 30 días del seed): 22 solicitudes, 22 640 tokens,
+90,91 % de éxito, 1 619 ms de latencia media.
