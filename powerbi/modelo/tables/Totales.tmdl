@@ -71,7 +71,7 @@ table Totales
 		mode: import
 		source =
 			let
-			    url = "http://localhost:4000/api/external/analytics/usage?from=2026-01-01&to=2026-12-31",
+			    url = "https://rutaia-api-q3y2.onrender.com/api/bi/usage?from=2026-01-01&to=2026-12-31",
 			    respuesta = Web.Contents(url, [Headers = [#"X-API-Key" = ApiKey]]),
 			    totales = Json.Document(respuesta)[totals],
 			    tabla = #table(Record.FieldNames(totales), {Record.FieldValues(totales)})

@@ -1,17 +1,41 @@
 # Despliegue y CI/CD
 
+## Despliegue actual (Render)
+
+| Recurso | URL |
+|---|---|
+| App + API | https://rutaia-api-q3y2.onrender.com |
+| Swagger | https://rutaia-api-q3y2.onrender.com/api-docs |
+| Power BI | `GET /api/bi/usage` con `X-API-Key: demo-bi-key-123` |
+| PostgreSQL | `rutaia-db` (Render, plan gratuito, Oregon) |
+
+La app y la API viven en **un único servicio web**: Express sirve `client/dist`
+y las rutas `/api`, así que comparten dominio y no hay CORS de por medio. La base
+es un PostgreSQL gestionado de Render inyectado como `DATABASE_URL`.
+
+### Secretos de GitHub necesarios
+
+| Secreto | Valor |
+|---|---|
+| `RENDER_API_KEY` | API key de la cuenta de Render |
+| `RENDER_SERVICE_ID` | `srv-dbpmstmc6qcc73dh49sg` |
+
+`RENDER_API_URL` es opcional (el flujo usa la URL de producción por defecto).
+
+---
+
 El flujo de GitHub Actions (`.github/workflows/ci.yml`) ejecuta:
 
-1. **Backend**: MySQL 8.4 como servicio, esquema + seed + ingesta RAG, las 74 pruebas
-   con Vitest/Supertest y el arranque real en `NODE_ENV=production`.
+1. **Backend**: PostgreSQL 16 como servicio, esquema + seed + ingesta RAG, las 74
+   pruebas con Vitest/Supertest y el arranque real en `NODE_ENV=production`.
 2. **Frontend**: `npm ci`, `npm run lint`, `npm run build` y publicación del artefacto.
-3. **Despliegue** (solo en `main` y tras aprobar pruebas): API en **Render** y frontend
-   en **Vercel**, seguido de una verificación de humo contra la URL publicada.
+3. **Despliegue** (solo en `main` y tras aprobar pruebas): servicio en **Render**,
+   seguido de una verificación de humo contra la URL publicada.
 
 Todo el despliegue es opcional: si los secretos no existen, el job lo informa y no
 falla.
 
-## 1. Base de datos MySQL gestionada
+## 1. Base de datos PostgreSQL gestionada
 
 Opciones gratuitas compatibles:
 
