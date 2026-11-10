@@ -129,7 +129,7 @@ export default function DashboardPage({ onNavigate }) {
           <p>
             Explora el catálogo nacional, conversa con el asistente RAG o deja que los
             agentes construyan un plan con datos reales de clima, distancias y
-            actividades entre los 22 departamentos.
+            actividades del catálogo nacional.
           </p>
           <div className="hero-actions">
             <button
@@ -167,7 +167,7 @@ export default function DashboardPage({ onNavigate }) {
           <div className="map-line line-two" />
           <div className="hero-map-label">
             <strong>{COUNTRY.name}</strong>
-            <span>22 departamentos · catálogo nacional</span>
+            <span>Catálogo nacional · IA y datos reales</span>
           </div>
         </div>
       </section>

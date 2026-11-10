@@ -169,62 +169,62 @@ export const CATEGORY_STYLES = {
   playa: {
     icon: 'waves',
     gradient:
-      'linear-gradient(135deg, #0a5f74 0%, #14a3a3 52%, #8fe3c8 100%)',
+      'linear-gradient(135deg, #2a4a7a 0%, #5b7fb5 48%, #ffc2a8 100%)',
   },
   volcan: {
     icon: 'mountain',
     gradient:
-      'linear-gradient(135deg, #3b2d1f 0%, #a16207 48%, #f2b74a 100%)',
+      'linear-gradient(135deg, #4a2418 0%, #c0642e 48%, #ffc98a 100%)',
   },
   lago: {
     icon: 'waves',
     gradient:
-      'linear-gradient(135deg, #12457a 0%, #1f7fb8 50%, #7fd0e8 100%)',
+      'linear-gradient(135deg, #24356b 0%, #6b5aa8 50%, #ffb8a0 100%)',
   },
   cafe: {
     icon: 'coffee',
     gradient:
-      'linear-gradient(135deg, #33261a 0%, #7a4a21 50%, #d9a05b 100%)',
+      'linear-gradient(135deg, #3b2418 0%, #8a4a2a 50%, #e8a872 100%)',
   },
   naturaleza: {
     icon: 'leaf',
     gradient:
-      'linear-gradient(135deg, #123b25 0%, #1c7a48 52%, #86d59b 100%)',
+      'linear-gradient(135deg, #3a2c1e 0%, #8a5a3a 52%, #ffce9e 100%)',
   },
   selva: {
     icon: 'leaf',
     gradient:
-      'linear-gradient(135deg, #0f3220 0%, #17693a 50%, #6fc98d 100%)',
+      'linear-gradient(135deg, #2f2340 0%, #6d3f6a 50%, #ffb08a 100%)',
   },
   colonial: {
     icon: 'temple',
     gradient:
-      'linear-gradient(135deg, #5a2418 0%, #b3452b 52%, #f0b47a 100%)',
+      'linear-gradient(135deg, #5a2018 0%, #c2483a 52%, #ffc08a 100%)',
   },
   ciudad: {
     icon: 'building',
     gradient:
-      'linear-gradient(135deg, #1d2b44 0%, #3d5a80 50%, #a9c6e8 100%)',
+      'linear-gradient(135deg, #2a2148 0%, #5c4a8a 50%, #f0a8b0 100%)',
   },
   arqueologia: {
     icon: 'temple',
     gradient:
-      'linear-gradient(135deg, #2c3a1d 0%, #6b7a2a 50%, #d9cf7a 100%)',
+      'linear-gradient(135deg, #3d2a1f 0%, #a06a35 50%, #ffe0a3 100%)',
   },
   aventura: {
     icon: 'tent',
     gradient:
-      'linear-gradient(135deg, #4a2a1a 0%, #c25a22 52%, #f5c07a 100%)',
+      'linear-gradient(135deg, #4a2218 0%, #d0603a 52%, #ffd08a 100%)',
   },
   gastronomia: {
     icon: 'utensils',
     gradient:
-      'linear-gradient(135deg, #40202c 0%, #9b3a52 52%, #f2a2a2 100%)',
+      'linear-gradient(135deg, #431f2e 0%, #b03a5c 52%, #ffb0b0 100%)',
   },
   cultura: {
     icon: 'bookmark',
     gradient:
-      'linear-gradient(135deg, #2a2140 0%, #5b4b9c 52%, #b8a8ee 100%)',
+      'linear-gradient(135deg, #2f1f42 0%, #7a4a9c 52%, #e8b0ea 100%)',
   },
 };
 
@@ -244,7 +244,7 @@ const CATEGORY_MATCHERS = [
 
 const DEFAULT_STYLE = {
   icon: 'pin',
-  gradient: 'linear-gradient(135deg, #07352a 0%, #0d6b4f 52%, #12a594 100%)',
+  gradient: 'linear-gradient(135deg, #7a3556 0%, #a5497a 52%, #c98be0 100%)',
 };
 
 export function categoryStyle(category = '', region = '') {
