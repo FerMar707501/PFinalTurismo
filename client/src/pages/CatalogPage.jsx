@@ -7,13 +7,12 @@ import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
 import {
-  destinationEmoji,
   destinationGradient,
+  destinationIcon,
   formatCurrency,
   formatNumber,
   priceLevelLabel,
 } from '../utils/format.js';
-
 const PRICE_OPTIONS = [
   { value: '', label: 'Todos los precios' },
   { value: '1', label: 'Económico' },
@@ -169,10 +168,12 @@ export default function CatalogPage({ focusDestinationId }) {
           <span className="eyebrow">
             <Icon name="compass" size={14} /> Catálogo turístico
           </span>
-          <h1>Encuentra tu próximo destino</h1>
+          <h1>Encuentra tu próximo destino en Guatemala</h1>
           <p>
-            Explora playas, montañas, pueblos patrimoniales y selvas. Cada ficha
-            incluye actividades, temporada recomendada y nivel de precio.
+            Explora el lago de Atitlán, los volcanes del altiplano, las playas del
+            Pacífico, la selva de Petén y los pueblos coloniales declarados Patrimonio
+            de la Humanidad. Cada ficha incluye actividades, temporada recomendada y
+            nivel de precio.
           </p>
         </div>
         <div className="page-head-badge">
@@ -269,8 +270,8 @@ export default function CatalogPage({ focusDestinationId }) {
                   className="destination-visual"
                   style={{ background: destinationGradient(destination) }}
                 >
-                  <span className="destination-emoji">
-                    {destinationEmoji(destination)}
+                  <span className="destination-icon">
+                    <Icon name={destinationIcon(destination)} size={26} />
                   </span>
                   <span className="destination-price">
                     {priceLevelLabel(destination.priceLevel)}
@@ -348,7 +349,9 @@ export default function CatalogPage({ focusDestinationId }) {
               className="detail-hero"
               style={{ background: destinationGradient(selected) }}
             >
-              <span className="detail-emoji">{destinationEmoji(selected)}</span>
+              <span className="detail-icon">
+                <Icon name={destinationIcon(selected)} size={38} />
+              </span>
               <div>
                 <span className="detail-region">
                   <Icon name="globe" size={14} /> {selected.region}

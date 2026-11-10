@@ -1,18 +1,20 @@
-const numberFormatter = new Intl.NumberFormat('es-CO');
+const LOCALE = 'es-GT';
 
-const currencyFormatter = new Intl.NumberFormat('es-CO', {
+const numberFormatter = new Intl.NumberFormat(LOCALE);
+
+const currencyFormatter = new Intl.NumberFormat(LOCALE, {
   style: 'currency',
-  currency: 'COP',
+  currency: 'GTQ',
   maximumFractionDigits: 0,
 });
 
-const dateFormatter = new Intl.DateTimeFormat('es-CO', {
+const dateFormatter = new Intl.DateTimeFormat(LOCALE, {
   day: '2-digit',
   month: 'short',
   year: 'numeric',
 });
 
-const dateTimeFormatter = new Intl.DateTimeFormat('es-CO', {
+const dateTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
   day: '2-digit',
   month: 'short',
   hour: '2-digit',
@@ -163,54 +165,104 @@ export function toolLabel(name) {
   return TOOL_LABELS[name] ?? name ?? 'Herramienta';
 }
 
-const CATEGORY_META = [
-  {
-    match: /playa|mar|isla|caribe/i,
-    emoji: '🌊',
-    gradient: 'linear-gradient(135deg, #0e7490 0%, #22d3ee 58%, #fef3c7 100%)',
+export const CATEGORY_STYLES = {
+  playa: {
+    icon: 'waves',
+    gradient:
+      'linear-gradient(135deg, #0a5f74 0%, #14a3a3 52%, #8fe3c8 100%)',
   },
-  {
-    match: /selva|amazon|naturaleza|parque|río|rio/i,
-    emoji: '🌿',
-    gradient: 'linear-gradient(135deg, #14532d 0%, #22c55e 60%, #fde68a 100%)',
+  volcan: {
+    icon: 'mountain',
+    gradient:
+      'linear-gradient(135deg, #3b2d1f 0%, #a16207 48%, #f2b74a 100%)',
   },
-  {
-    match: /café|cafetero|montaña|valle/i,
-    emoji: '☕',
-    gradient: 'linear-gradient(135deg, #4a2c17 0%, #b45309 55%, #fcd34d 100%)',
+  lago: {
+    icon: 'waves',
+    gradient:
+      'linear-gradient(135deg, #12457a 0%, #1f7fb8 50%, #7fd0e8 100%)',
   },
-  {
-    match: /colonial|histórico|historico|ciudad/i,
-    emoji: '🏛️',
-    gradient: 'linear-gradient(135deg, #78350f 0%, #f59e0b 55%, #fef3c7 100%)',
+  cafe: {
+    icon: 'coffee',
+    gradient:
+      'linear-gradient(135deg, #33261a 0%, #7a4a21 50%, #d9a05b 100%)',
   },
-  {
-    match: /aventura|desierto|deporte/i,
-    emoji: '🧭',
-    gradient: 'linear-gradient(135deg, #7c2d12 0%, #ea580c 55%, #fde68a 100%)',
+  naturaleza: {
+    icon: 'leaf',
+    gradient:
+      'linear-gradient(135deg, #123b25 0%, #1c7a48 52%, #86d59b 100%)',
   },
+  selva: {
+    icon: 'leaf',
+    gradient:
+      'linear-gradient(135deg, #0f3220 0%, #17693a 50%, #6fc98d 100%)',
+  },
+  colonial: {
+    icon: 'temple',
+    gradient:
+      'linear-gradient(135deg, #5a2418 0%, #b3452b 52%, #f0b47a 100%)',
+  },
+  ciudad: {
+    icon: 'building',
+    gradient:
+      'linear-gradient(135deg, #1d2b44 0%, #3d5a80 50%, #a9c6e8 100%)',
+  },
+  arqueologia: {
+    icon: 'temple',
+    gradient:
+      'linear-gradient(135deg, #2c3a1d 0%, #6b7a2a 50%, #d9cf7a 100%)',
+  },
+  aventura: {
+    icon: 'tent',
+    gradient:
+      'linear-gradient(135deg, #4a2a1a 0%, #c25a22 52%, #f5c07a 100%)',
+  },
+  gastronomia: {
+    icon: 'utensils',
+    gradient:
+      'linear-gradient(135deg, #40202c 0%, #9b3a52 52%, #f2a2a2 100%)',
+  },
+  cultura: {
+    icon: 'bookmark',
+    gradient:
+      'linear-gradient(135deg, #2a2140 0%, #5b4b9c 52%, #b8a8ee 100%)',
+  },
+};
+
+const CATEGORY_MATCHERS = [
+  { match: /playa|mar|isla|caribe/i, style: 'playa' },
+  { match: /volc|montaña|montana|sierra|cumbre/i, style: 'volcan' },
+  { match: /lago|río|rio|lacustre/i, style: 'lago' },
+  { match: /caf|hacienda/i, style: 'cafe' },
+  { match: /selva|amazon|bosque|naturaleza|parque|reserva/i, style: 'naturaleza' },
+  { match: /colonial|históric|historic|patrimonio/i, style: 'colonial' },
+  { match: /arqueolog|maya|ruina|templo|piramide|pirámide/i, style: 'arqueologia' },
+  { match: /capital|ciudad/i, style: 'ciudad' },
+  { match: /aventura|deporte|senderismo|trekking/i, style: 'aventura' },
+  { match: /gastronom|mercado|sabor/i, style: 'gastronomia' },
+  { match: /cultura|arte|artesanía|artesania|pueblo/i, style: 'cultura' },
 ];
 
-export function categoryMeta(category = '') {
-  return (
-    CATEGORY_META.find((item) => item.match.test(category)) ?? {
-      emoji: '📍',
-      gradient: 'linear-gradient(135deg, #134e4a 0%, #0f766e 55%, #fbbf24 100%)',
-    }
-  );
+const DEFAULT_STYLE = {
+  icon: 'pin',
+  gradient: 'linear-gradient(135deg, #07352a 0%, #0d6b4f 52%, #12a594 100%)',
+};
+
+export function categoryStyle(category = '', region = '') {
+  const text = `${category} ${region}`;
+  const found = CATEGORY_MATCHERS.find((item) => item.match.test(text));
+  return found ? { ...CATEGORY_STYLES[found.style] } : { ...DEFAULT_STYLE };
+}
+
+export function categoryIcon(category = '', region = '') {
+  return categoryStyle(category, region).icon;
 }
 
 export function destinationGradient(destination) {
-  const meta = categoryMeta(
-    `${destination?.category ?? ''} ${destination?.region ?? ''}`,
-  );
-  return meta.gradient;
+  return categoryStyle(destination?.category, destination?.region).gradient;
 }
 
-export function destinationEmoji(destination) {
-  return categoryMeta(
-    `${destination?.category ?? ''} ${destination?.region ?? ''}`,
-  ).emoji;
+export function destinationIcon(destination) {
+  return categoryStyle(destination?.category, destination?.region).icon;
 }
 
 export function serviceLabel(code) {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isInsideCountry } from '../../config/country.js';
 
 const nameSchema = z.string().trim().min(2).max(150);
 const regionSchema = z.string().trim().min(2).max(120);
@@ -21,6 +22,31 @@ const coordinateSchema = (min, max, label) =>
     .nullable()
     .optional();
 
+/** Obliga a que el destino esté dentro del territorio guatemalteco. */
+const guatemalaRule = (data, ctx) => {
+  if (data.lat === undefined || data.lat === null) {
+    return;
+  }
+
+  if (data.lng === undefined || data.lng === null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['lng'],
+      message: 'Debes indicar latitud y longitud juntas.',
+    });
+    return;
+  }
+
+  if (!isInsideCountry(data.lat, data.lng)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['lat'],
+      message:
+        'Las coordenadas deben estar dentro de Guatemala (RutaIA solo cubre ese país).',
+    });
+  }
+};
+
 const tagsSchema = z
   .union([
     z.array(z.string().trim().min(1).max(50)).max(20),
@@ -37,18 +63,20 @@ const tagsSchema = z
     message: 'Las etiquetas no pueden superar 255 caracteres en total.',
   });
 
-export const createDestinationBody = z.object({
-  name: nameSchema,
-  region: regionSchema,
-  description: descriptionSchema,
-  category: categorySchema,
-  tags: tagsSchema.optional(),
-  lat: coordinateSchema(-90, 90, 'Latitud'),
-  lng: coordinateSchema(-180, 180, 'Longitud'),
-  priceLevel: priceLevelSchema.default(2),
-  bestSeason: bestSeasonSchema,
-  active: z.boolean().default(true),
-});
+export const createDestinationBody = z
+  .object({
+    name: nameSchema,
+    region: regionSchema,
+    description: descriptionSchema,
+    category: categorySchema,
+    tags: tagsSchema.optional(),
+    lat: coordinateSchema(-90, 90, 'Latitud'),
+    lng: coordinateSchema(-180, 180, 'Longitud'),
+    priceLevel: priceLevelSchema.default(2),
+    bestSeason: bestSeasonSchema,
+    active: z.boolean().default(true),
+  })
+  .superRefine(guatemalaRule);
 
 export const updateDestinationBody = z
   .object({
@@ -63,6 +91,7 @@ export const updateDestinationBody = z
     bestSeason: bestSeasonSchema,
     active: z.boolean().optional(),
   })
+  .superRefine(guatemalaRule)
   .refine((data) => Object.keys(data).length > 0, {
     message: 'Debes enviar al menos un campo para actualizar.',
   });

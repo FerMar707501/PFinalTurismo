@@ -50,8 +50,8 @@ const stamp = Date.now();
 const MODEL = 'openai/gpt-oss-120b';
 
 const weatherFixture = {
-  location: 'Salento',
-  timezone: 'America/Bogota',
+  location: 'Antigua Guatemala',
+  timezone: 'America/Guatemala',
   days: [
     {
       date: '2026-11-10',
@@ -65,8 +65,8 @@ const weatherFixture = {
 };
 
 const routeFixture = {
-  origin: 'Bogotá',
-  destination: 'Salento',
+  origin: 'Guatemala',
+  destination: 'Antigua Guatemala',
   mode: 'driving',
   distanceKm: 290.5,
   durationMinutes: 360,
@@ -74,9 +74,9 @@ const routeFixture = {
 };
 
 const wikiFixture = {
-  title: 'Salento',
-  extract: 'Salento es un municipio del departamento del Quindío.',
-  url: 'https://es.wikipedia.org/wiki/Salento',
+  title: 'Antigua Guatemala',
+  extract: 'Antigua Guatemala es una ciudad colonial del departamento de Sacatepéquez.',
+  url: 'https://es.wikipedia.org/wiki/Antigua_Guatemala',
   thumbnail: null,
 };
 
@@ -112,16 +112,16 @@ function completion({
 }
 
 const itineraryAnswer =
-  'Día 1: llegada a Salento y recorrido por el pueblo.\n' +
+  'Día 1: llegada a Antigua Guatemala y recorrido por el pueblo.\n' +
   'Día 2: Valle de Cocora y finca cafetera.\n' +
   'Día 3: pueblos del café y regreso.';
 
 const compareAnswer =
   '| Destino | Clima | Costo estimado | Oferta |\n' +
   '|---|---|---|---|\n' +
-  '| Cartagena | Cálido | Alto | Playa e historia |\n' +
-  '| Santa Marta | Cálido | Medio | Playa y naturaleza |\n' +
-  'Recomendación: Santa Marta por variedad y presupuesto.';
+  '| Antigua Guatemala | Templado | Medio | Centro histórico y volcanes |\n' +
+  '| Lago de Atitlán y Sololá | Templado | Medio | Lago y cultura maya |\n' +
+  'Recomendación: Antigua Guatemala por cercanía y presupuesto.';
 
 beforeAll(async () => {
   const adminLogin = await request(app).post('/api/auth/login').send({
@@ -230,14 +230,14 @@ describe('Fase 5 — agentes multi-paso', () => {
   it('exige autenticación y valida los datos de entrada', async () => {
     const unauthorized = await request(app)
       .post('/api/agents/itinerary')
-      .send({ destinationId: 6, days: 3 });
+      .send({ destinationId: 1, days: 3 });
 
     expect(unauthorized.status).toBe(401);
 
     const invalid = await request(app)
       .post('/api/agents/itinerary')
       .set('Authorization', `Bearer ${agentToken}`)
-      .send({ destinationId: 6 });
+      .send({ destinationId: 1 });
 
     expect(invalid.status).toBe(400);
     expect(invalid.body.error.code).toBe('VALIDATION_ERROR');
@@ -256,10 +256,10 @@ describe('Fase 5 — agentes multi-paso', () => {
       .mockResolvedValueOnce(
         completion({
           toolCalls: [
-            toolCall('get_destination_info', { destinationId: 6 }, 'call_1'),
+            toolCall('get_destination_info', { destinationId: 1 }, 'call_1'),
             toolCall(
               'list_destination_activities',
-              { destinationId: 6, limit: 4 },
+              { destinationId: 1, limit: 4 },
               'call_2',
             ),
           ],
@@ -270,17 +270,17 @@ describe('Fase 5 — agentes multi-paso', () => {
           toolCalls: [
             toolCall(
               'get_weather_forecast',
-              { destinationId: 6, days: 3 },
+              { destinationId: 1, days: 3 },
               'call_3',
             ),
             toolCall(
               'get_route_distance',
-              { destinationId: 6, originCity: 'Bogotá' },
+              { destinationId: 1, originCity: 'Guatemala' },
               'call_4',
             ),
             toolCall(
               'get_wikipedia_summary',
-              { destinationId: 6 },
+              { destinationId: 1 },
               'call_5',
             ),
           ],
@@ -292,11 +292,11 @@ describe('Fase 5 — agentes multi-paso', () => {
       .post('/api/agents/itinerary')
       .set('Authorization', `Bearer ${agentToken}`)
       .send({
-        destinationId: 6,
+        destinationId: 1,
         days: 3,
         travelers: 2,
         budget: 'medio',
-        originCity: 'Bogotá',
+        originCity: 'Guatemala',
         interests: ['café', 'naturaleza'],
       });
 
@@ -308,7 +308,7 @@ describe('Fase 5 — agentes multi-paso', () => {
     expect(response.body.usage.totalTokens).toBe(450);
     expect(response.body.quota.usedTokens).toBe(450);
     expect(
-      response.body.sources.some((source) => source.title === 'Salento'),
+      response.body.sources.some((source) => source.title === 'Antigua Guatemala'),
     ).toBe(true);
     expect(
       response.body.sources.some((source) => source.provider === 'Open-Meteo'),
@@ -329,15 +329,15 @@ describe('Fase 5 — agentes multi-paso', () => {
     expect(mockGenerate.mock.calls[1][0].tools).toHaveLength(5);
     expect(mockGenerate.mock.calls[0][0].toolChoice).toBeUndefined();
     expect(mockWeather).toHaveBeenCalledWith(
-      expect.objectContaining({ locationName: 'Salento', days: 3 }),
+      expect.objectContaining({ locationName: 'Antigua Guatemala', days: 3 }),
     );
     expect(mockRoute).toHaveBeenCalledWith(
       expect.objectContaining({
-        originCity: 'Bogotá',
-        destinationName: 'Salento',
+        originCity: 'Guatemala',
+        destinationName: 'Antigua Guatemala',
       }),
     );
-    expect(mockWikipedia).toHaveBeenCalledWith('Salento');
+    expect(mockWikipedia).toHaveBeenCalledWith('Antigua Guatemala');
 
     const [conversationRows] = await pool.execute(
       'SELECT * FROM conversations WHERE id = $1',
@@ -386,7 +386,7 @@ describe('Fase 5 — agentes multi-paso', () => {
         completion({
           toolCalls: [
             toolCall('get_destination_info', { destinationId: 1 }, 'call_1'),
-            toolCall('get_destination_info', { destinationId: 4 }, 'call_2'),
+            toolCall('get_destination_info', { destinationId: 2 }, 'call_2'),
           ],
         }),
       )
@@ -400,7 +400,7 @@ describe('Fase 5 — agentes multi-paso', () => {
             ),
             toolCall(
               'list_destination_activities',
-              { destinationId: 4, limit: 4 },
+              { destinationId: 2, limit: 4 },
               'call_4',
             ),
             toolCall(
@@ -410,17 +410,17 @@ describe('Fase 5 — agentes multi-paso', () => {
             ),
             toolCall(
               'get_weather_forecast',
-              { destinationId: 4, days: 3 },
+              { destinationId: 2, days: 3 },
               'call_6',
             ),
             toolCall(
               'get_route_distance',
-              { destinationId: 1, originCity: 'Bogotá' },
+              { destinationId: 1, originCity: 'Guatemala' },
               'call_7',
             ),
             toolCall(
               'get_route_distance',
-              { destinationId: 4, originCity: 'Bogotá' },
+              { destinationId: 2, originCity: 'Guatemala' },
               'call_8',
             ),
           ],
@@ -436,7 +436,7 @@ describe('Fase 5 — agentes multi-paso', () => {
         days: 4,
         travelers: 2,
         budget: 'alto',
-        originCity: 'Bogotá',
+        originCity: 'Guatemala',
         interests: ['playa', 'cultura'],
       });
 
@@ -448,11 +448,11 @@ describe('Fase 5 — agentes multi-paso', () => {
     expect(response.body.quota.usedTokens).toBe(900);
     expect(
       response.body.sources.some(
-        (source) => source.title === 'Cartagena de Indias',
+        (source) => source.title === 'Antigua Guatemala',
       ),
     ).toBe(true);
     expect(
-      response.body.sources.some((source) => source.title === 'Santa Marta'),
+      response.body.sources.some((source) => source.title === 'Lago de Atitlán y Sololá'),
     ).toBe(true);
 
     compareRunId = response.body.run.id;
@@ -489,7 +489,7 @@ describe('Fase 5 — agentes multi-paso', () => {
 
     expect(detail.status).toBe(200);
     expect(detail.body.run.steps).toHaveLength(3);
-    expect(detail.body.run.input.destinationId).toBe(6);
+    expect(detail.body.run.input.destinationId).toBe(1);
     expect(detail.body.run.output.answer).toContain('Día 1');
 
     const foreign = await request(app)
@@ -503,7 +503,7 @@ describe('Fase 5 — agentes multi-paso', () => {
     const response = await request(app)
       .post('/api/agents/itinerary')
       .set('Authorization', `Bearer ${lowQuotaToken}`)
-      .send({ destinationId: 6, days: 3 });
+      .send({ destinationId: 1, days: 3 });
 
     expect(response.status).toBe(429);
     expect(response.body.error.code).toBe('TOKEN_QUOTA_EXCEEDED');
@@ -542,7 +542,7 @@ describe('Fase 5 — agentes multi-paso', () => {
     const response = await request(app)
       .post('/api/agents/itinerary')
       .set('Authorization', `Bearer ${agentToken}`)
-      .send({ destinationId: 6, days: 2 });
+      .send({ destinationId: 1, days: 2 });
 
     expect(response.status).toBe(502);
     expect(response.body.error.code).toBe('AI_UPSTREAM_ERROR');
@@ -580,7 +580,7 @@ describe('Fase 5 — agentes multi-paso', () => {
       mockGenerate.mockResolvedValueOnce(
         completion({
           toolCalls: [
-            toolCall('get_destination_info', { destinationId: 6 }, `call_${step}`),
+            toolCall('get_destination_info', { destinationId: 1 }, `call_${step}`),
           ],
         }),
       );
@@ -589,7 +589,7 @@ describe('Fase 5 — agentes multi-paso', () => {
     const response = await request(app)
       .post('/api/agents/itinerary')
       .set('Authorization', `Bearer ${agentToken}`)
-      .send({ destinationId: 6, days: 2 });
+      .send({ destinationId: 1, days: 2 });
 
     expect(response.status).toBe(201);
     expect(response.body.answer).toContain('Resumen elaborado');
@@ -610,7 +610,7 @@ describe('Fase 5 — agentes multi-paso', () => {
           toolCalls: [
             toolCall(
               'get_weather_forecast',
-              { destinationId: 6, days: 3 },
+              { destinationId: 1, days: 3 },
               'call_1',
             ),
           ],
@@ -626,7 +626,7 @@ describe('Fase 5 — agentes multi-paso', () => {
     const response = await request(app)
       .post('/api/agents/itinerary')
       .set('Authorization', `Bearer ${agentToken}`)
-      .send({ destinationId: 6, days: 3 });
+      .send({ destinationId: 1, days: 3 });
 
     expect(response.status).toBe(201);
     expect(response.body.steps[0].results[0].ok).toBe(false);
@@ -648,7 +648,7 @@ describe('Fase 5 — agentes multi-paso', () => {
       const response = await request(app)
         .post('/api/agents/itinerary')
         .set('Authorization', `Bearer ${agentToken}`)
-        .send({ destinationId: 6, days: 3 });
+        .send({ destinationId: 1, days: 3 });
 
       expect(response.status).toBe(409);
       expect(response.body.error.code).toBe('SERVICE_DISABLED');

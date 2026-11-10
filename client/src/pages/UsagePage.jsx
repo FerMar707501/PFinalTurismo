@@ -73,8 +73,14 @@ export default function UsagePage({ onNavigate }) {
 
   const percent = Math.min(100, Math.max(0, quota?.percentUsed ?? 0));
   const tone = quotaTone(quota);
+  const ringColor =
+    tone === 'danger'
+      ? 'var(--danger)'
+      : tone === 'warning'
+        ? 'var(--amber)'
+        : 'var(--brand)';
   const resetDate = quota?.resetAt
-    ? new Date(quota.resetAt).toLocaleDateString('es-CO', {
+    ? new Date(quota.resetAt).toLocaleDateString('es-GT', {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
@@ -112,7 +118,7 @@ export default function UsagePage({ onNavigate }) {
           <div
             className="usage-ring"
             style={{
-              background: `conic-gradient(#0f766e ${percent}%, #e4ece8 0)`,
+              background: `conic-gradient(${ringColor} ${percent}%, var(--surface-inset) 0)`,
             }}
           >
             <div className="usage-ring-center">

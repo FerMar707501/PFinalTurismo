@@ -13,9 +13,9 @@ const SERVICES = [
 ];
 
 const SERVICE_COLORS = {
-  chat_rag: '#0ea5e9',
-  agent_itinerary: '#0f766e',
-  agent_compare: '#d97706',
+  chat_rag: '#12a594',
+  agent_itinerary: '#0d6b4f',
+  agent_compare: '#d9a01a',
 };
 
 function isoDay(date) {
@@ -37,7 +37,7 @@ const PRESETS = [
 ];
 
 function serviceColor(code) {
-  return SERVICE_COLORS[code] ?? '#697a74';
+  return SERVICE_COLORS[code] ?? 'var(--muted)';
 }
 
 function maxOf(values) {
@@ -56,7 +56,7 @@ function niceMax(value) {
 }
 
 function dateLabel(value) {
-  return new Date(`${value}T12:00:00Z`).toLocaleDateString('es-CO', {
+  return new Date(`${value}T12:00:00Z`).toLocaleDateString('es-GT', {
     day: '2-digit',
     month: 'short',
     timeZone: 'UTC',
@@ -137,7 +137,7 @@ function ServiceBreakdown({ services, totalTokens }) {
                 },
                 { parts: [], cursor: 0 },
               )
-              .parts.join(', ')}, #eef2f0 0)`,
+              .parts.join(', ')}, var(--surface-inset) 0)`,
           }}
           aria-hidden="true"
         >
@@ -387,7 +387,7 @@ export default function AnalyticsPage({ onNavigate }) {
           <p className="analytics-range-note">
             Mostrando {dateLabel(data.meta.from)} → {dateLabel(data.meta.to)} (
             {data.meta.days} días). Actualizado{' '}
-            {new Date(data.meta.generatedAt).toLocaleTimeString('es-CO')}.          </p>
+            {new Date(data.meta.generatedAt).toLocaleTimeString('es-GT')}.          </p>
         ) : null}
       </section>
 

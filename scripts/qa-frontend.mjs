@@ -187,7 +187,7 @@ for (const [view, name] of views) {
 
 await evaluate(`window.location.hash = '#/catalog'`);
 await sleep(1600);
-await clickText('.destination-card', 'Cartagena de Indias');
+await clickText('.destination-card', 'Antigua Guatemala');
 await sleep(1800);
 await shot('10-catalog-detail', false);
 report.push(await overflowReport('catalog-detail'));

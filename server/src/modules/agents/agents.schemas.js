@@ -3,7 +3,7 @@ import { z } from 'zod';
 const budget = z.enum(['bajo', 'medio', 'alto']);
 
 const commonFields = {
-  originCity: z.string().trim().min(2).max(120).default('Bogotá'),
+  originCity: z.string().trim().min(2).max(120).default('Guatemala'),
   travelers: z.coerce.number().int().min(1).max(20).default(2),
   budget: budget.default('medio'),
   interests: z

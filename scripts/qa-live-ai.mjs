@@ -51,7 +51,7 @@ const first = await request('/api/chat', {
   token,
   method: 'POST',
   body: JSON.stringify({
-    message: '¿Qué actividades recomiendas en Cartagena para viajar con niños?',
+    message: '¿Qué actividades recomiendas en Antigua Guatemala para viajar con niños?',
   }),
 });
 const reply = first.body?.message?.content ?? '';

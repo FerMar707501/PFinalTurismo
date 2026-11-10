@@ -286,8 +286,8 @@ describe('Fase 3 — catálogo y sincronización RAG', () => {
           'Destino creado por las pruebas automáticas de la Fase 3.',
         category: 'Pruebas',
         tags: ['test', 'fase3'],
-        lat: 4.5,
-        lng: -74.1,
+        lat: 14.6,
+        lng: -90.5,
         priceLevel: 2,
         bestSeason: 'Todo el año',
       });
@@ -311,8 +311,8 @@ describe('Fase 3 — catálogo y sincronización RAG', () => {
         category: 'Pruebas',
         durationMin: 60,
         price: 10000,
-        lat: 4.5,
-        lng: -74.1,
+        lat: 14.6,
+        lng: -90.5,
       });
 
     expect(response.status).toBe(201);
@@ -437,6 +437,26 @@ describe('Fase 3 — catálogo y sincronización RAG', () => {
       [destinationId, activityId],
     );
     expect(Number(docs[0].total)).toBe(0);
+  });
+
+  it('rechaza coordenadas fuera de Guatemala', async () => {
+    const response = await request(app)
+      .post('/api/destinations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: `${destinationName} fuera de alcance`,
+        region: 'Región de prueba',
+        description: 'Destino fuera del territorio guatemalteco para probar el alcance.',
+        category: 'Pruebas',
+        lat: 4.71,
+        lng: -74.07,
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    expect(JSON.stringify(response.body.error.details ?? response.body)).toContain(
+      'Guatemala',
+    );
   });
 
   it('el administrador puede filtrar destinos inactivos', async () => {

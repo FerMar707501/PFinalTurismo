@@ -25,7 +25,7 @@ const weatherArgs = z.object({
 
 const routeArgs = z.object({
   destinationId: destinationIdSchema,
-  originCity: z.string().trim().min(2).max(120).default('Bogotá'),
+  originCity: z.string().trim().min(2).max(120).default('Guatemala'),
 });
 
 const wikipediaArgs = z.object({
@@ -65,7 +65,7 @@ export const AGENT_TOOLS = [
     function: {
       name: 'list_destination_activities',
       description:
-        'Lista las actividades activas de un destino con su categoría, duración y precio por persona en pesos colombianos.',
+        'Lista las actividades activas de un destino con su categoría, duración y precio por persona en quetzales guatemaltecos (GTQ).',
       parameters: {
         type: 'object',
         properties: {
@@ -131,7 +131,7 @@ export const AGENT_TOOLS = [
           originCity: {
             type: 'string',
             description:
-              'Ciudad de origen del viajero, por ejemplo Bogotá o Medellín.',
+              'Ciudad de origen del viajero en Guatemala, por ejemplo Guatemala, Quetzaltenango o Cobán.',
           },
         },
         required: ['destinationId', 'originCity'],
@@ -303,7 +303,7 @@ async function routeDistance({ destinationId, originCity }) {
   }
 
   const route = await getRouteDistance({
-    originCity: originCity || 'Bogotá',
+    originCity: originCity || 'Guatemala',
     destinationLat: Number(destination.lat),
     destinationLng: Number(destination.lng),
     destinationName: destination.name,

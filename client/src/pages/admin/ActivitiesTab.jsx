@@ -425,7 +425,7 @@ export default function ActivitiesTab() {
               />
             </label>
             <label className="field">
-              <span>Precio por persona (COP)</span>
+              <span>Precio por persona (GTQ)</span>
               <input
                 className="input"
                 type="number"

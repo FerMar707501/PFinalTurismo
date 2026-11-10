@@ -5,19 +5,22 @@ import { EmptyState, InlineAlert, LoadingState } from '../components/States.jsx'
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
-  destinationEmoji,
   destinationGradient,
+  destinationIcon,
   formatNumber,
   formatRelative,
 } from '../utils/format.js';
+import { ORIGIN_CITIES } from '../utils/country.js';
 
 const INTERESTS = [
   'playa',
-  'naturaleza',
+  'volcanes',
+  'lago',
   'café',
-  'cultura',
+  'cultura maya',
   'aventura',
   'gastronomía',
+  'mercados',
   'familia',
   'fotografía',
 ];
@@ -47,8 +50,8 @@ export default function ItineraryPage({ onNavigate }) {
     days: 3,
     travelers: 2,
     budget: 'medio',
-    originCity: 'Bogotá',
-    interests: ['naturaleza', 'café'],
+    originCity: 'Guatemala',
+    interests: ['volcanes', 'café'],
     notes: '',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -180,7 +183,7 @@ export default function ItineraryPage({ onNavigate }) {
           <span className="eyebrow">
             <Icon name="map" size={14} /> Agente agent_itinerary
           </span>
-          <h1>Diseña un itinerario a tu medida</h1>
+          <h1>Diseña un itinerario por Guatemala</h1>
           <p>
             Cuéntanos cómo viajas y el agente consultará actividades, clima, rutas y
             contexto cultural antes de proponer un plan día por día.
@@ -202,7 +205,7 @@ export default function ItineraryPage({ onNavigate }) {
       {quota?.exceeded ? (
         <InlineAlert tone="danger" title="Cuota mensual agotada">
           Podrás volver a usar los agentes cuando se renueve tu cuota el{' '}
-          {new Date(quota.resetAt).toLocaleDateString('es-CO')}.
+          {new Date(quota.resetAt).toLocaleDateString('es-GT')}.
         </InlineAlert>
       ) : null}
 
@@ -210,7 +213,7 @@ export default function ItineraryPage({ onNavigate }) {
         <EmptyState
           icon="compass"
           title="No hay destinos activos"
-          message="El catálogo debe tener destinos publicados para planear un itinerario."
+          message="El catálogo debe tener destinos de Guatemala publicados para planear un itinerario."
         />
       ) : (
         <div className="agent-workbench">
@@ -286,13 +289,20 @@ export default function ItineraryPage({ onNavigate }) {
                   type="text"
                   value={form.originCity}
                   onChange={update('originCity')}
-                  placeholder="Bogotá, Medellín, Cali…"
+                  placeholder="Guatemala, Quetzaltenango, Cobán…"
+                  list="origin-cities"
                   minLength="2"
                   required
                 />
+                <datalist id="origin-cities">
+                  {ORIGIN_CITIES.map((city) => (
+                    <option key={city} value={city} />
+                  ))}
+                </datalist>
               </div>
               <small className="field-hint">
-                Se usa para calcular la distancia terrestre con OSRM.
+                Se usa para calcular la distancia terrestre con OSRM dentro de
+                Guatemala.
               </small>
             </label>
 
@@ -354,7 +364,9 @@ export default function ItineraryPage({ onNavigate }) {
                   className="destination-preview-hero"
                   style={{ background: destinationGradient(selectedDestination) }}
                 >
-                  <span>{destinationEmoji(selectedDestination)}</span>
+                  <span className="preview-icon">
+                    <Icon name={destinationIcon(selectedDestination)} size={28} />
+                  </span>
                   <div>
                     <small>{selectedDestination.region}</small>
                     <strong>{selectedDestination.name}</strong>

@@ -2,6 +2,7 @@ import { pool, withTransaction } from '../../config/db.js';
 import { generateChatCompletion } from '../../ai/groqClient.js';
 import { AppError } from '../../errors/AppError.js';
 import { buildContext, retrieveDocuments } from '../../rag/retrieval.js';
+import { SCOPE_RULE } from '../../config/country.js';
 import { getPagination } from '../../utils/pagination.js';
 import { getServiceByCode } from '../services/services.service.js';
 import {
@@ -113,6 +114,7 @@ function buildPromptMessages({ service, history, message, sources }) {
   const context = buildContext(sources);
   const systemContent = [
     service.systemPrompt,
+    SCOPE_RULE,
     '',
     'CONTEXTO RECUPERADO DEL CATÁLOGO:',
     context,

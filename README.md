@@ -4,6 +4,10 @@ Aplicación web con servicios de Inteligencia Artificial: chatbot con RAG, dos a
 multi-paso, autenticación por roles, control de consumo de tokens, API REST documentada,
 reporte web y reporte de Power BI.
 
+**Enfoque:** turismo exclusivamente en **Guatemala** (22 departamentos, 12 destinos demo,
+48 actividades y precios en quetzales GTQ). La interfaz incluye modo claro/oscuro y menú
+lateral colapsable.
+
 **Stack:** React + Vite · Express · PostgreSQL 16 · Groq (tool calling) · Docker · GitHub Actions.
 
 ## Enlaces de la entrega (producción)
@@ -38,9 +42,9 @@ reporte web y reporte de Power BI.
 
 ```mermaid
 flowchart LR
-    U[Usuario] -->|HTTPS| R[React SPA<br/>Vercel]
+    U[Usuario] -->|HTTPS| R[React SPA<br/>servida por Express]
     R -->|JWT| A[Express API<br/>Render]
-    A -->|SQL| D[(MySQL 8<br/>Railway)]
+    A -->|SQL| D[(PostgreSQL 16<br/>Render)]
     A -->|Chat + Tools| G[Groq API]
     A -->|Clima| W[Open-Meteo]
     A -->|Rutas| O[OSRM]
@@ -208,7 +212,7 @@ Ejemplo de chat:
 
 ```powershell
 $body = @{
-  message = 'Quiero visitar Cartagena con niños'
+  message = 'Quiero visitar Antigua Guatemala con niños'
 } | ConvertTo-Json
 
 Invoke-RestMethod -Method Post `

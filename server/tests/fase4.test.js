@@ -34,7 +34,7 @@ const stamp = Date.now();
 
 const defaultCompletion = {
   content:
-    'Según el catálogo, Cartagena de Indias es una excelente opción [1].',
+    'Según el catálogo, Antigua Guatemala es una excelente opción [1].',
   model: 'openai/gpt-oss-120b',
   usage: {
     promptTokens: 120,
@@ -152,7 +152,7 @@ describe('Fase 4 — chat RAG', () => {
   });
 
   it('responde con RAG, guarda mensajes y registra tokens', async () => {
-    const message = 'Quiero visitar Cartagena de Indias con niños';
+    const message = 'Quiero visitar Antigua Guatemala con niños';
 
     const response = await request(app)
       .post('/api/chat')
@@ -161,16 +161,16 @@ describe('Fase 4 — chat RAG', () => {
 
     expect(response.status).toBe(201);
     expect(response.body.conversation.id).toBeGreaterThan(0);
-    expect(response.body.conversation.title).toContain('Cartagena');
+    expect(response.body.conversation.title).toContain('Antigua');
     expect(response.body.message.role).toBe('assistant');
-    expect(response.body.message.content).toContain('Cartagena');
+    expect(response.body.message.content).toContain('Antigua');
     expect(response.body.userMessage.role).toBe('user');
     expect(response.body.usage.totalTokens).toBe(200);
     expect(response.body.quota.usedTokens).toBe(200);
     expect(response.body.sources.length).toBeGreaterThan(0);
     expect(
       response.body.sources.some((source) =>
-        source.title.includes('Cartagena'),
+        source.title.includes('Antigua'),
       ),
     ).toBe(true);
 
@@ -239,7 +239,7 @@ describe('Fase 4 — chat RAG', () => {
     );
 
     expect(promptContents).toContain(
-      'Quiero visitar Cartagena de Indias con niños',
+      'Quiero visitar Antigua Guatemala con niños',
     );
     expect(promptContents).toContain(defaultCompletion.content);
     expect(promptContents.at(-1)).toBe(message);

@@ -145,9 +145,10 @@ async function inspectRetrieval() {
   const sampleQueries = [
     'playa con niños',
     'pueblos coloniales y café',
-    'buceo y arrecifes',
-    'selva y río Amazonas',
-    'rafting y aventura',
+    'volcanes y lava',
+    'selva y ruinas mayas',
+    'artesanía y mercados del altiplano',
+    'lago de Atitlán en lancha',
   ];
 
   for (const search of sampleQueries) {

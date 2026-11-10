@@ -84,7 +84,7 @@ const sent = await evaluate(`(() => {
   const textarea = document.querySelector('textarea');
   if (!textarea) return 'sin textarea';
   const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
-  setter.call(textarea, '¿Qué actividades recomiendas en Cartagena para viajar con niños?');
+  setter.call(textarea, '¿Qué actividades recomiendas en Antigua Guatemala para viajar con niños?');
   textarea.dispatchEvent(new Event('input', { bubbles: true }));
   const form = textarea.closest('form');
   if (form) form.requestSubmit();

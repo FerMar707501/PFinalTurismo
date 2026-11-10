@@ -353,7 +353,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"message\": \"¿Qué actividades recomiendas en Cartagena para viajar con niños?\"\n}"
+              "raw": "{\n  \"message\": \"¿Qué actividades recomiendas en Antigua Guatemala para viajar con niños?\"\n}"
             },
             "url": "{{baseUrl}}/chat"
           }

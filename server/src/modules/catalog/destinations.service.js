@@ -1,4 +1,5 @@
 import { pool, withTransaction } from '../../config/db.js';
+import { isInsideCountry } from '../../config/country.js';
 import { AppError } from '../../errors/AppError.js';
 import {
   deleteDestinationDocuments,
@@ -199,6 +200,17 @@ export async function updateDestination(id, data) {
   const updates = [];
   const params = [];
   const slot = () => `$${params.length + 1}`;
+
+  const nextLat = data.lat !== undefined ? data.lat : current.lat;
+  const nextLng = data.lng !== undefined ? data.lng : current.lng;
+
+  if (nextLat !== null && nextLat !== undefined && nextLng !== null && nextLng !== undefined) {
+    if (!isInsideCountry(nextLat, nextLng)) {
+      throw AppError.badRequest(
+        'Las coordenadas deben estar dentro de Guatemala (RutaIA solo cubre ese país).',
+      );
+    }
+  }
 
   if (data.name !== undefined) {
     updates.push(`name = ${slot()}`);

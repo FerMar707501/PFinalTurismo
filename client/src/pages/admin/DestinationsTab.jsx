@@ -8,8 +8,8 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import {
-  destinationEmoji,
   destinationGradient,
+  destinationIcon,
   formatNumber,
   priceLevelLabel,
 } from '../../utils/format.js';
@@ -250,7 +250,7 @@ export default function DestinationsTab() {
                           className="table-thumb"
                           style={{ background: destinationGradient(destination) }}
                         >
-                          {destinationEmoji(destination)}
+                          <Icon name={destinationIcon(destination)} size={17} />
                         </span>
                         <div>
                           <strong>{destination.name}</strong>

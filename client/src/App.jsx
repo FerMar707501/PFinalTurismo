@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Layout from './components/Layout.jsx';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
+import { ThemeProvider } from './context/ThemeContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
@@ -33,6 +34,14 @@ function readViewFromHash() {
   return VIEWS.includes(raw) ? raw : 'dashboard';
 }
 
+function readSidebarPreference() {
+  try {
+    return localStorage.getItem('rutaia_sidebar') === 'collapsed';
+  } catch {
+    return false;
+  }
+}
+
 function SplashScreen() {
   return (
     <div className="splash-screen">
@@ -49,6 +58,7 @@ function AppContent() {
   const [view, setView] = useState(readViewFromHash);
   const [catalogFocus, setCatalogFocus] = useState(null);
   const [focusRunId, setFocusRunId] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarPreference);
 
   useEffect(() => {
     const onHashChange = () => {
@@ -76,6 +86,20 @@ function AppContent() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [view]);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((current) => {
+      const next = !current;
+
+      try {
+        localStorage.setItem('rutaia_sidebar', next ? 'collapsed' : 'expanded');
+      } catch {
+        // Preferencia solo en memoria.
+      }
+
+      return next;
+    });
+  };
 
   const navigate = (nextView, options = {}) => {
     const adminOnly =
@@ -107,7 +131,12 @@ function AppContent() {
   }
 
   return (
-    <Layout view={safeView} onNavigate={navigate}>
+    <Layout
+      view={safeView}
+      onNavigate={navigate}
+      collapsed={sidebarCollapsed}
+      onToggleCollapsed={toggleSidebar}
+    >
       {safeView === 'dashboard' ? (
         <DashboardPage onNavigate={navigate} />
       ) : null}
@@ -134,10 +163,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <AppContent />
-      </ToastProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

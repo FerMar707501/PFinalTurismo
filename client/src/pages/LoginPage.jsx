@@ -1,28 +1,38 @@
 import { useState } from 'react';
 import Icon from '../components/Icon.jsx';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { API_URL } from '../api/client.js';
+import { COUNTRY, FACTS } from '../utils/country.js';
 
 function docsUrl() {
   const base = API_URL.replace(/\/api\/?$/, '');
   return `${base}/api/docs`;
 }
 
-const FEATURES = [
+const REGIONS_SHOWCASE = [
+  { icon: 'temple', label: 'Tikal', note: 'Petén' },
+  { icon: 'waves', label: 'Atitlán', note: 'Sololá' },
+  { icon: 'mountain', label: 'Pacaya', note: 'Escuintla' },
+  { icon: 'coffee', label: 'Antigua', note: 'Sacatepéquez' },
+];
+
+const DEMO_ACCOUNTS = [
   {
-    icon: 'chat',
-    title: 'Chat con RAG',
-    text: 'Respuestas basadas en el catálogo real, con memoria y fuentes citadas.',
-  },
-  {
-    icon: 'map',
-    title: 'Agentes de viaje',
-    text: 'Itinerarios y comparaciones que consultan clima, rutas y actividades.',
-  },
-  {
+    role: 'admin',
+    title: 'Administrador',
+    email: 'admin@rutaia.local',
+    password: 'Admin123!',
     icon: 'shield',
-    title: 'Control de consumo',
-    text: 'Cuotas mensuales por usuario y trazabilidad completa de cada llamada.',
+    hint: 'Catálogo, usuarios y analítica',
+  },
+  {
+    role: 'user',
+    title: 'Viajero demo',
+    email: 'demo@rutaia.local',
+    password: 'Demo123!',
+    icon: 'user',
+    hint: 'Chat y agentes con cuota',
   },
 ];
 
@@ -32,17 +42,14 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [factIndex, setFactIndex] = useState(0);
 
   const update = (field) => (event) => {
     setForm((current) => ({ ...current, [field]: event.target.value }));
   };
 
-  const fillDemo = (role) => {
-    setForm({
-      email:
-        role === 'admin' ? 'admin@rutaia.local' : 'demo@rutaia.local',
-      password: role === 'admin' ? 'Admin123!' : 'Demo123!',
-    });
+  const fillDemo = (account) => {
+    setForm({ email: account.email, password: account.password });
     setError('');
   };
 
@@ -65,57 +72,79 @@ export default function LoginPage() {
 
   return (
     <main className="login-page">
-      <section className="login-story">
-        <div className="login-story-inner">
+      <section className="login-stage">
+        <header className="login-stage-top">
           <div className="login-brand">
             <span className="brand-mark large">R</span>
             <div>
               <strong>RutaIA</strong>
-              <small>Turismo inteligente para Colombia</small>
+              <small>Turismo inteligente · {COUNTRY.name}</small>
             </div>
           </div>
+          <ThemeToggle compact />
+        </header>
 
-          <p className="login-eyebrow">Proyecto final · Programación Comercial</p>
+        <div className="login-stage-copy">
+          <span className="login-pill">
+            <Icon name="sparkles" size={14} />
+            Proyecto final · Programación Comercial
+          </span>
           <h1>
-            Descubre Colombia con una IA que conoce el territorio.
+            Recorre Guatemala con una IA que conoce cada departamento.
           </h1>
           <p className="login-lead">
-            Un asistente conversacional, dos agentes multi-paso y un catálogo
-            turístico conectado a fuentes abiertas de clima, rutas y cultura.
+            Del lago de Atitlán a Tikal, del altiplano volcánico a la costa del
+            Pacífico: un asistente con RAG y dos agentes multi-paso que consultan
+            catálogo, clima y rutas reales.
           </p>
 
-          <div className="login-features">
-            {FEATURES.map((feature) => (
-              <article key={feature.title} className="login-feature">
-                <span className="feature-icon">
-                  <Icon name={feature.icon} size={19} />
+          <ul className="login-highlights">
+            {REGIONS_SHOWCASE.map((item) => (
+              <li key={item.label}>
+                <span className="login-highlight-icon">
+                  <Icon name={item.icon} size={18} />
                 </span>
-                <div>
-                  <strong>{feature.title}</strong>
-                  <p>{feature.text}</p>
-                </div>
-              </article>
+                <span>
+                  <strong>{item.label}</strong>
+                  <small>{item.note}</small>
+                </span>
+              </li>
             ))}
-          </div>
+          </ul>
 
-          <div className="login-story-footer">
-            <span>
-              <Icon name="globe" size={15} /> Open-Meteo · OSRM · Wikipedia
-            </span>
-            <span>
-              <Icon name="sparkles" size={15} /> Groq tool calling
-            </span>
-          </div>
+          <button
+            type="button"
+            className="login-fact"
+            onClick={() => setFactIndex((index) => (index + 1) % FACTS.length)}
+            title="Ver otro dato"
+          >
+            <Icon name="info" size={16} />
+            <span>{FACTS[factIndex]}</span>
+            <Icon name="refresh" size={14} />
+          </button>
         </div>
-        <div className="login-orbit orbit-one" />
-        <div className="login-orbit orbit-two" />
+
+        <footer className="login-stage-foot">
+          <span>
+            <Icon name="globe" size={14} /> Open-Meteo · OSRM · Wikipedia
+          </span>
+          <span>
+            <Icon name="bot" size={14} /> Groq tool calling
+          </span>
+        </footer>
+
+        <div className="login-contours" aria-hidden="true">
+          <span className="contour c1" />
+          <span className="contour c2" />
+          <span className="contour c3" />
+        </div>
       </section>
 
       <section className="login-panel">
         <div className="login-card">
           <div className="login-card-head">
             <span className="login-card-icon">
-              <Icon name="key" size={21} />
+              <Icon name="key" size={20} />
             </span>
             <div>
               <h2>Inicia sesión</h2>
@@ -159,8 +188,9 @@ export default function LoginPage() {
                   type="button"
                   className="input-action"
                   onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                 >
-                  {showPassword ? 'Ocultar' : 'Ver'}
+                  <Icon name={showPassword ? 'close' : 'search'} size={15} />
                 </button>
               </div>
             </label>
@@ -189,26 +219,31 @@ export default function LoginPage() {
           <div className="demo-box">
             <span className="demo-label">Cuentas de demostración</span>
             <div className="demo-actions">
-              <button type="button" className="demo-btn" onClick={() => fillDemo('admin')}>
-                <span className="demo-avatar">A</span>
-                <span>
-                  <strong>Administrador</strong>
-                  <small>admin@rutaia.local</small>
-                </span>
-              </button>
-              <button type="button" className="demo-btn" onClick={() => fillDemo('user')}>
-                <span className="demo-avatar demo-avatar-user">U</span>
-                <span>
-                  <strong>Usuario demo</strong>
-                  <small>demo@rutaia.local</small>
-                </span>
-              </button>
+              {DEMO_ACCOUNTS.map((account) => (
+                <button
+                  key={account.role}
+                  type="button"
+                  className="demo-btn"
+                  onClick={() => fillDemo(account)}
+                >
+                  <span className={`demo-avatar demo-avatar-${account.role}`}>
+                    <Icon name={account.icon} size={16} />
+                  </span>
+                  <span>
+                    <strong>{account.title}</strong>
+                    <small>{account.hint}</small>
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 
           <p className="login-note">
             No hay registro público. Las cuentas y los límites de tokens los gestiona
-            un administrador. <a href={docsUrl()} target="_blank" rel="noreferrer">Ver API</a>
+            un administrador.{' '}
+            <a href={docsUrl()} target="_blank" rel="noreferrer">
+              Ver API
+            </a>
           </p>
         </div>
       </section>

@@ -109,7 +109,7 @@ function buildFallbackAnswer(steps) {
           lines.push(`- ${label}: ${items.length} elemento(s) disponibles.`);
           for (const item of items.slice(0, 8)) {
             const title = item.name ?? item.title ?? item.day;
-            const price = item.price != null ? ` · $${item.price} COP` : '';
+            const price = item.price != null ? ` · Q${item.price} GTQ` : '';
             if (title) {
               lines.push(`  · ${title}${price}`);
             }

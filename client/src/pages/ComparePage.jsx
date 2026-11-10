@@ -5,19 +5,22 @@ import { EmptyState, InlineAlert, LoadingState } from '../components/States.jsx'
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
-  destinationEmoji,
   destinationGradient,
+  destinationIcon,
   formatNumber,
   formatRelative,
 } from '../utils/format.js';
+import { ORIGIN_CITIES } from '../utils/country.js';
 
 const INTERESTS = [
   'playa',
-  'naturaleza',
+  'volcanes',
+  'lago',
   'café',
-  'cultura',
+  'cultura maya',
   'aventura',
   'gastronomía',
+  'mercados',
   'familia',
   'fotografía',
 ];
@@ -40,8 +43,8 @@ export default function ComparePage({ onNavigate }) {
     days: 3,
     travelers: 2,
     budget: 'medio',
-    originCity: 'Bogotá',
-    interests: ['naturaleza', 'cultura'],
+    originCity: 'Guatemala',
+    interests: ['volcanes', 'cultura maya'],
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -188,7 +191,7 @@ export default function ComparePage({ onNavigate }) {
           <span className="eyebrow">
             <Icon name="compare" size={14} /> Agente agent_compare
           </span>
-          <h1>Compara destinos con datos, no con corazonadas</h1>
+          <h1>Compara destinos de Guatemala con datos, no con corazonadas</h1>
           <p>
             Elige entre dos y cuatro lugares. El agente consultará actividades, clima y
             distancia, y cerrará con una recomendación justificada.
@@ -210,7 +213,7 @@ export default function ComparePage({ onNavigate }) {
       {quota?.exceeded ? (
         <InlineAlert tone="danger" title="Cuota mensual agotada">
           Podrás volver a usar los agentes cuando se renueve tu cuota el{' '}
-          {new Date(quota.resetAt).toLocaleDateString('es-CO')}.
+          {new Date(quota.resetAt).toLocaleDateString('es-GT')}.
         </InlineAlert>
       ) : null}
 
@@ -218,7 +221,7 @@ export default function ComparePage({ onNavigate }) {
         <EmptyState
           icon="compass"
           title="No hay destinos activos"
-          message="El catálogo debe tener destinos publicados para comparar."
+          message="El catálogo debe tener destinos de Guatemala publicados para comparar."
         />
       ) : (
         <form onSubmit={handleSubmit} className="page-stack">
@@ -256,7 +259,7 @@ export default function ComparePage({ onNavigate }) {
                       className="compare-visual"
                       style={{ background: destinationGradient(destination) }}
                     >
-                      <span>{destinationEmoji(destination)}</span>
+                      <Icon name={destinationIcon(destination)} size={22} />
                     </span>
                     <span className="compare-copy">
                       <strong>{destination.name}</strong>
@@ -282,7 +285,8 @@ export default function ComparePage({ onNavigate }) {
                     onClick={() => toggleDestination(destination.id)}
                     title="Quitar de la comparación"
                   >
-                    {destinationEmoji(destination)} {destination.name}
+                    <Icon name={destinationIcon(destination)} size={13} />{' '}
+                    {destination.name}
                     <Icon name="close" size={12} />
                   </button>
                 ))}
@@ -355,10 +359,16 @@ export default function ComparePage({ onNavigate }) {
                     type="text"
                     value={form.originCity}
                     onChange={update('originCity')}
-                    placeholder="Bogotá, Medellín, Cali…"
+                    placeholder="Guatemala, Quetzaltenango, Antigua…"
+                    list="origin-cities-compare"
                     minLength="2"
                     required
                   />
+                  <datalist id="origin-cities-compare">
+                    {ORIGIN_CITIES.map((city) => (
+                      <option key={city} value={city} />
+                    ))}
+                  </datalist>
                 </div>
               </label>
 

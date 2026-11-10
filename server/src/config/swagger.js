@@ -1191,7 +1191,7 @@ export const openapiSpec = {
         type: 'object',
         properties: {
           id: { type: 'integer', format: 'int64', example: 1 },
-          name: { type: 'string', example: 'Cartagena de Indias' },
+          name: { type: 'string', example: 'Antigua Guatemala' },
           region: { type: 'string', example: 'Bolívar' },
           description: { type: 'string' },
           category: {
@@ -1301,7 +1301,7 @@ export const openapiSpec = {
           destinationName: {
             type: 'string',
             nullable: true,
-            example: 'Cartagena de Indias',
+            example: 'Antigua Guatemala',
           },
           destinationRegion: {
             type: 'string',
@@ -1444,7 +1444,7 @@ export const openapiSpec = {
             type: 'string',
             minLength: 1,
             maxLength: 4000,
-            example: 'Quiero visitar Cartagena con niños',
+            example: 'Quiero visitar Antigua Guatemala con niños',
           },
           conversationId: {
             type: 'integer',
@@ -1472,7 +1472,7 @@ export const openapiSpec = {
           },
           title: {
             type: 'string',
-            example: 'Cartagena de Indias',
+            example: 'Antigua Guatemala',
           },
           score: { type: 'number', example: 8.215 },
         },
@@ -1508,7 +1508,7 @@ export const openapiSpec = {
           title: {
             type: 'string',
             nullable: true,
-            example: 'Quiero visitar Cartagena con niños',
+            example: 'Quiero visitar Antigua Guatemala con niños',
           },
           serviceCode: { type: 'string', example: 'chat_rag' },
           lastMessageAt: {
@@ -1584,8 +1584,8 @@ export const openapiSpec = {
           },
           originCity: {
             type: 'string',
-            example: 'Bogotá',
-            default: 'Bogotá',
+            example: 'Guatemala',
+            default: 'Guatemala',
           },
           travelers: {
             type: 'integer',
@@ -1634,8 +1634,8 @@ export const openapiSpec = {
           },
           originCity: {
             type: 'string',
-            example: 'Bogotá',
-            default: 'Bogotá',
+            example: 'Guatemala',
+            default: 'Guatemala',
           },
           travelers: {
             type: 'integer',

@@ -5,21 +5,22 @@ import { EmptyState, InlineAlert, LoadingState } from '../components/States.jsx'
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
-  destinationEmoji,
   destinationGradient,
+  destinationIcon,
   formatNumber,
   formatRelative,
   priceLevelLabel,
   serviceLabel,
   statusLabel,
 } from '../utils/format.js';
+import { COUNTRY } from '../utils/country.js';
 
 const QUICK_ACTIONS = [
   {
     view: 'chat',
     icon: 'chat',
     title: 'Pregunta al asistente',
-    text: 'Consulta destinos, actividades y recomendaciones con fuentes del catálogo.',
+    text: 'Consulta destinos, actividades y consejos de viaje con fuentes del catálogo.',
     tone: 'teal',
   },
   {
@@ -27,13 +28,13 @@ const QUICK_ACTIONS = [
     icon: 'map',
     title: 'Diseña un itinerario',
     text: 'Un agente combina clima, rutas, presupuesto y actividades día por día.',
-    tone: 'amber',
+    tone: 'gold',
   },
   {
     view: 'compare',
     icon: 'compare',
     title: 'Compara destinos',
-    text: 'Evalúa hasta cuatro lugares y recibe una recomendación justificada.',
+    text: 'Evalúa hasta cuatro lugares de Guatemala y recibe una recomendación justificada.',
     tone: 'coral',
   },
 ];
@@ -123,11 +124,12 @@ export default function DashboardPage({ onNavigate }) {
             <Icon name="sparkles" size={14} /> {greeting()}, {firstName}
           </span>
           <h1>
-            Tu próxima ruta por Colombia empieza con una buena pregunta.
+            Tu próxima ruta por Guatemala empieza con una buena pregunta.
           </h1>
           <p>
-            Explora el catálogo, conversa con el asistente RAG o deja que los agentes
-            construyan un plan con datos reales de clima y distancia.
+            Explora el catálogo nacional, conversa con el asistente RAG o deja que los
+            agentes construyan un plan con datos reales de clima, distancias y
+            actividades entre los 22 departamentos.
           </p>
           <div className="hero-actions">
             <button
@@ -149,15 +151,23 @@ export default function DashboardPage({ onNavigate }) {
           </div>
         </div>
         <div className="hero-map" aria-hidden="true">
-          <span className="map-pin pin-one">🌊</span>
-          <span className="map-pin pin-two">☕</span>
-          <span className="map-pin pin-three">🏛️</span>
-          <span className="map-pin pin-four">🌿</span>
+          <span className="map-pin pin-one">
+            <Icon name="waves" size={18} />
+          </span>
+          <span className="map-pin pin-two">
+            <Icon name="temple" size={18} />
+          </span>
+          <span className="map-pin pin-three">
+            <Icon name="mountain" size={18} />
+          </span>
+          <span className="map-pin pin-four">
+            <Icon name="leaf" size={18} />
+          </span>
           <div className="map-line line-one" />
           <div className="map-line line-two" />
           <div className="hero-map-label">
-            <strong>Colombia</strong>
-            <span>6 regiones · 12 destinos</span>
+            <strong>{COUNTRY.name}</strong>
+            <span>22 departamentos · catálogo nacional</span>
           </div>
         </div>
       </section>
@@ -171,7 +181,7 @@ export default function DashboardPage({ onNavigate }) {
           </span>
           <div>
             <strong>{state.loading ? '—' : formatNumber(state.destinationTotal)}</strong>
-            <span>Destinos publicados</span>
+            <span>Destinos de Guatemala</span>
           </div>
         </article>
         <article className="stat-card">
@@ -206,7 +216,7 @@ export default function DashboardPage({ onNavigate }) {
       {quota?.exceeded ? (
         <InlineAlert tone="danger" title="Cuota mensual agotada">
           Ya no puedes ejecutar servicios de IA este mes. El límite se renueva el{' '}
-          {new Date(quota.resetAt).toLocaleDateString('es-CO')}.
+          {new Date(quota.resetAt).toLocaleDateString('es-GT')}.
         </InlineAlert>
       ) : null}
 
@@ -259,7 +269,7 @@ export default function DashboardPage({ onNavigate }) {
           <EmptyState
             icon="compass"
             title="El catálogo está vacío"
-            message="Un administrador debe publicar destinos para comenzar."
+            message="Un administrador debe publicar destinos de Guatemala para comenzar."
           />
         ) : (
           <div className="destination-grid compact-grid">
@@ -276,8 +286,8 @@ export default function DashboardPage({ onNavigate }) {
                   className="destination-visual small"
                   style={{ background: destinationGradient(destination) }}
                 >
-                  <span className="destination-emoji">
-                    {destinationEmoji(destination)}
+                  <span className="destination-icon">
+                    <Icon name={destinationIcon(destination)} size={22} />
                   </span>
                   <span className="destination-price">
                     {priceLevelLabel(destination.priceLevel)}

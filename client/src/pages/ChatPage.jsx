@@ -9,10 +9,10 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
 import { formatNumber, formatRelative, truncate } from '../utils/format.js';
 
 const SUGGESTIONS = [
-  '¿Qué destinos recomiendas para una primera visita a Colombia?',
-  'Arma un plan de tres días en Salento para una pareja.',
-  '¿Qué actividades hay en Cartagena para viajar con niños?',
-  'Compara la playa de San Andrés con la Sierra Nevada de Santa Marta.',
+  '¿Qué destinos de Guatemala recomiendas para una primera visita?',
+  'Arma un plan de tres días en Antigua Guatemala para una pareja.',
+  '¿Qué actividades hay en el lago de Atitlán para viajar con niños?',
+  'Compara las playas de Monterrico con la selva de Tikal.',
 ];
 
 export default function ChatPage() {
@@ -131,7 +131,7 @@ export default function ChatPage() {
     if (quota?.exceeded) {
       setError(
         'Tu cuota mensual está agotada. El límite se renueva el ' +
-          new Date(quota.resetAt).toLocaleDateString('es-CO') +
+          new Date(quota.resetAt).toLocaleDateString('es-GT') +
           '.',
       );
       return;
@@ -199,11 +199,11 @@ export default function ChatPage() {
           <span className="eyebrow">
             <Icon name="chat" size={14} /> Asistente con RAG
           </span>
-          <h1>Conversa con RutaIA</h1>
-          <p>
-            Respuestas fundamentadas en el catálogo, con memoria de la conversación y
-            fuentes verificables.
-          </p>
+            <h1>Conversa con RutaIA</h1>
+            <p>
+              Respuestas fundamentadas en el catálogo turístico de Guatemala, con
+              memoria de la conversación y fuentes verificables.
+            </p>
         </div>
         <div className="page-head-badge">
           <Icon name="shield" size={17} />
@@ -307,7 +307,7 @@ export default function ChatPage() {
                 <h2>¿Qué quieres descubrir hoy?</h2>
                 <p>
                   Pregunta por destinos, actividades, presupuestos o ideas de viaje.
-                  El asistente buscará en el catálogo antes de responder.
+                  El asistente buscará en el catálogo de Guatemala antes de responder.
                 </p>
                 <div className="suggestion-grid">
                   {SUGGESTIONS.map((suggestion) => (
@@ -386,7 +386,7 @@ export default function ChatPage() {
             {quota?.exceeded ? (
               <InlineAlert tone="danger">
                 Cuota agotada. El servicio se reactivará automáticamente el{' '}
-                {new Date(quota.resetAt).toLocaleDateString('es-CO')}.
+                {new Date(quota.resetAt).toLocaleDateString('es-GT')}.
               </InlineAlert>
             ) : null}
             <div className="composer-box">

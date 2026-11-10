@@ -347,7 +347,7 @@ export async function getWikipediaSummary(title) {
     let data = await fetchWikipediaPage(pageTitle);
 
     if (!data || isWikipediaDisambiguation(data)) {
-      const results = await searchWikipedia(`${pageTitle} Colombia`);
+      const results = await searchWikipedia(`${pageTitle} Guatemala`);
 
       for (const result of results) {
         if (result.title === data?.title) {

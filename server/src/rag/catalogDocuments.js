@@ -5,10 +5,10 @@ const PRICE_LEVEL_LABELS = {
   4: 'lujo',
 };
 
-const priceFormatter = new Intl.NumberFormat('es-CO');
+const priceFormatter = new Intl.NumberFormat('es-GT');
 
 function formatPrice(value) {
-  return `$${priceFormatter.format(Number(value ?? 0))} COP`;
+  return `Q${priceFormatter.format(Number(value ?? 0))} GTQ`;
 }
 
 export function buildDestinationContent(destination, activities) {
