@@ -1,0 +1,29 @@
+name: Smoke producción
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: URL pública de la API (sin /api)
+        required: true
+        default: https://rutaia-api.onrender.com
+  schedule:
+    - cron: "0 12 * * *"
+
+jobs:
+  smoke:
+    name: Verificar API desplegada
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Health, OpenAPI, login y analítica
+        run: node scripts/smoke-api.mjs "${{ github.event.inputs.api_url || 'https://rutaia-api.onrender.com' }}"
+        env:
+          ADMIN_EMAIL: ${{ secrets.DEMO_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.DEMO_ADMIN_PASSWORD }}

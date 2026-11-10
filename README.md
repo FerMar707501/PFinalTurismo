@@ -432,6 +432,14 @@ node scripts/qa-frontend.mjs
   servicios de IA nunca se envía a usuarios normales.
 - Todas las consultas SQL son parametrizadas y las entradas se validan con Zod.
 
+## Documentación de entrega
+
+- Informe PDF: `docs/ProyectoFinal_RutaIA.pdf` (25 páginas, generado con `docs/generate-pdf.py`).
+- OpenAPI exportado: `docs/openapi.json`.
+- Postman: `docs/postman_collection.json` y `docs/postman_environment.json`.
+- Capturas: `docs/capturas/`.
+- Despliegue: `docs/deployment.md` y conexión de Power BI en `powerbi/README.md`.
+
 ## Nota sobre OneDrive
 
 Este proyecto está dentro de OneDrive. `node_modules` y los archivos de build pueden

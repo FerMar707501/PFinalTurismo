@@ -45,16 +45,17 @@ await check('OpenAPI expuesto', async () => {
 });
 
 await check('login de administrador', async () => {
-  const { status, body } = await request('/api/auth/login', {
+  const login = await request('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: 'admin@rutaia.local',
-      password: 'Admin123!',
+      email: process.env.ADMIN_EMAIL ?? 'admin@rutaia.local',
+      password: process.env.ADMIN_PASSWORD ?? 'Admin123!',
     }),
   });
-  if (status !== 200) throw new Error(`estado ${status}`);
-  adminToken = body.token;
+
+  if (login.status !== 200) throw new Error(`estado ${login.status}`);
+  adminToken = login.body.token;
   if (!adminToken) throw new Error('sin token');
 });
 

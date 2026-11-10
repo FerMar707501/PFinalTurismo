@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json.schemastore.org/dependabot-version-2.json",
+  "version": 2,
+  "updates": [
+    {
+      "package-ecosystem": "npm",
+      "directory": "/server",
+      "schedule": { "interval": "weekly" },
+      "open-pull-requests-limit": 5,
+      "groups": {
+        "server-produccion": {
+          "patterns": ["*"],
+          "exclude-patterns": ["vitest", "supertest", "nock"]
+        }
+      }
+    },
+    {
+      "package-ecosystem": "npm",
+      "directory": "/client",
+      "schedule": { "interval": "weekly" },
+      "open-pull-requests-limit": 5,
+      "groups": {
+        "client-produccion": {
+          "patterns": ["*"],
+          "exclude-patterns": ["vite", "@vitejs/*", "oxlint"]
+        }
+      }
+    },
+    {
+      "package-ecosystem": "github-actions",
+      "directory": "/",
+      "schedule": { "interval": "weekly" }
+    },
+    {
+      "package-ecosystem": "docker",
+      "directory": "/server",
+      "schedule": { "interval": "weekly" }
+    }
+  ]
+}
