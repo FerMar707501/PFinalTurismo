@@ -1,0 +1,45 @@
+table Diario
+	column date
+		dataType: DateTime
+		summarizeBy: none
+		sourceColumn: date
+
+	column requests
+		dataType: Int64
+		summarizeBy: none
+		sourceColumn: requests
+
+	column successfulRequests
+		dataType: Int64
+		summarizeBy: none
+		sourceColumn: successfulRequests
+
+	column blockedRequests
+		dataType: Int64
+		summarizeBy: none
+		sourceColumn: blockedRequests
+
+	column totalTokens
+		dataType: Int64
+		summarizeBy: none
+		sourceColumn: totalTokens
+
+	column promptTokens
+		dataType: Int64
+		summarizeBy: none
+		sourceColumn: promptTokens
+
+	column completionTokens
+		dataType: Int64
+		summarizeBy: none
+		sourceColumn: completionTokens
+	partition Diario-Partition = m
+		mode: import
+		source =
+			let
+			    url = "http://localhost:4000/api/external/analytics/usage?from=2026-01-01&to=2026-12-31",
+			    respuesta = Web.Contents(url, [Headers = [#"X-API-Key" = ApiKey]]),
+			    registros = Json.Document(respuesta)[daily],
+			    tabla = Table.FromRecords(registros)
+			in
+			    tabla

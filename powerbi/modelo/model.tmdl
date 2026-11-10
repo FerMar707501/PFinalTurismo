@@ -1,0 +1,9 @@
+model Model
+	culture: es-CO
+	defaultPowerBIDataSourceVersion: powerBI_V3
+
+ref table Totales
+ref table Servicios
+ref table Usuarios
+ref table Diario
+ref table Mensual

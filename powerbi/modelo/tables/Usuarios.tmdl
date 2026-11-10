@@ -1,0 +1,60 @@
+table Usuarios
+	column userId
+		dataType: Int64
+		summarizeBy: none
+		sourceColumn: userId
+
+	column name
+		dataType: String
+		summarizeBy: none
+		sourceColumn: name
+
+	column email
+		dataType: String
+		summarizeBy: none
+		sourceColumn: email
+
+	column role
+		dataType: String
+		summarizeBy: none
+		sourceColumn: role
+
+	column totalTokens
+		dataType: Int64
+		summarizeBy: none
+		sourceColumn: totalTokens
+
+	column requests
+		dataType: Int64
+		summarizeBy: none
+		sourceColumn: requests
+
+	column successfulRequests
+		dataType: Int64
+		summarizeBy: none
+		sourceColumn: successfulRequests
+
+	column blockedRequests
+		dataType: Int64
+		summarizeBy: none
+		sourceColumn: blockedRequests
+
+	column errorRequests
+		dataType: Int64
+		summarizeBy: none
+		sourceColumn: errorRequests
+
+	column averageLatencyMs
+		dataType: Int64
+		summarizeBy: none
+		sourceColumn: averageLatencyMs
+	partition Usuarios-Partition = m
+		mode: import
+		source =
+			let
+			    url = "http://localhost:4000/api/external/analytics/usage?from=2026-01-01&to=2026-12-31",
+			    respuesta = Web.Contents(url, [Headers = [#"X-API-Key" = ApiKey]]),
+			    registros = Json.Document(respuesta)[byUser],
+			    tabla = Table.FromRecords(registros)
+			in
+			    tabla

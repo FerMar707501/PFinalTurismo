@@ -1,0 +1,3 @@
+expression ApiKey =
+		"rutaia_CLAVE_DE_API" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	annotation PBI_IsParameterQuery = true
