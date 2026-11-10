@@ -101,7 +101,7 @@ const apiLimiter = rateLimit({
 
 app.use(API_PREFIX, apiLimiter);
 
-app.get('/', (_req, res) => {
+app.get(`${API_PREFIX}/`, (_req, res) => {
   res.json({
     service: APP_NAME,
     version: APP_VERSION,
