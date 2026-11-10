@@ -1,4 +1,8 @@
-const DEFAULT_API_URL = 'http://localhost:4000/api';
+// En producción el frontend y la API comparten dominio: se usa la ruta
+// relativa /api. En desarrollo apunta al servidor local.
+const DEFAULT_API_URL = import.meta.env.DEV
+  ? 'http://localhost:4000/api'
+  : '/api';
 
 export const API_URL = (
   import.meta.env.VITE_API_URL || DEFAULT_API_URL

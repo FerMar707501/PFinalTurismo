@@ -31,6 +31,8 @@ router.get('/', (_req, res) => {
       agents: `${API_PREFIX}/agents`,
       analytics: `${API_PREFIX}/analytics/usage`,
       externalAnalytics: `${API_PREFIX}/external/analytics/usage`,
+      // Alias corto para Power BI: GET /api/bi/usage con X-API-Key.
+      powerBi: `${API_PREFIX}/bi/usage`,
     },
   });
 });
@@ -46,5 +48,7 @@ router.use('/chat', chatRouter);
 router.use('/agents', agentsRouter);
 router.use('/analytics', analyticsRouter);
 router.use('/external/analytics', externalRouter);
+// Alias de entrega para Power BI (misma lógica y misma API key).
+router.use('/bi', externalRouter);
 
 export default router;

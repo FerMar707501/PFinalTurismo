@@ -192,7 +192,7 @@ async function getActiveDestination(destinationId) {
     `SELECT id, name, region, description, category, tags, lat, lng,
             price_level, best_season
      FROM destinations
-     WHERE id = ? AND active = 1
+     WHERE id = $1 AND active = TRUE
      LIMIT 1`,
     [destinationId],
   );
@@ -231,7 +231,7 @@ async function listActivities({ destinationId, limit }) {
   const [rows] = await pool.execute(
     `SELECT id, name, description, category, duration_min, price
      FROM activities
-     WHERE destination_id = ? AND active = 1
+     WHERE destination_id = $1 AND active = TRUE
      ORDER BY price ASC, id ASC
      LIMIT ${safeLimit}`,
     [destinationId],

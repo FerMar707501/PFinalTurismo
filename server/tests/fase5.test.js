@@ -203,23 +203,23 @@ afterAll(async () => {
   try {
     await pool.execute(
       `UPDATE ai_services
-       SET enabled = 1
+       SET enabled = TRUE
        WHERE code IN ('agent_itinerary', 'agent_compare')`,
     );
 
     const userIds = [agentUserId, lowQuotaUserId].filter(Boolean);
 
     if (userIds.length > 0) {
-      await pool.query('DELETE FROM usage_logs WHERE user_id IN (?)', [
+      await pool.query('DELETE FROM usage_logs WHERE user_id = ANY($1::bigint[])', [
         userIds,
       ]);
-      await pool.query('DELETE FROM agent_runs WHERE user_id IN (?)', [
+      await pool.query('DELETE FROM agent_runs WHERE user_id = ANY($1::bigint[])', [
         userIds,
       ]);
-      await pool.query('DELETE FROM conversations WHERE user_id IN (?)', [
+      await pool.query('DELETE FROM conversations WHERE user_id = ANY($1::bigint[])', [
         userIds,
       ]);
-      await pool.query('DELETE FROM users WHERE id IN (?)', [userIds]);
+      await pool.query('DELETE FROM users WHERE id = ANY($1::bigint[])', [userIds]);
     }
   } finally {
     await closePool();
@@ -340,14 +340,14 @@ describe('Fase 5 — agentes multi-paso', () => {
     expect(mockWikipedia).toHaveBeenCalledWith('Salento');
 
     const [conversationRows] = await pool.execute(
-      'SELECT * FROM conversations WHERE id = ?',
+      'SELECT * FROM conversations WHERE id = $1',
       [itineraryConversationId],
     );
     expect(conversationRows[0].service_code).toBe('agent_itinerary');
     expect(Number(conversationRows[0].user_id)).toBe(agentUserId);
 
     const [messageRows] = await pool.execute(
-      'SELECT * FROM messages WHERE conversation_id = ? ORDER BY id ASC',
+      'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY id ASC',
       [itineraryConversationId],
     );
     expect(messageRows).toHaveLength(2);
@@ -356,7 +356,7 @@ describe('Fase 5 — agentes multi-paso', () => {
     expect(storedSources.length).toBeGreaterThan(0);
 
     const [runRows] = await pool.execute(
-      'SELECT * FROM agent_runs WHERE id = ?',
+      'SELECT * FROM agent_runs WHERE id = $1',
       [itineraryRunId],
     );
     expect(runRows[0].status).toBe('success');
@@ -366,7 +366,7 @@ describe('Fase 5 — agentes multi-paso', () => {
 
     const [usageRows] = await pool.execute(
       `SELECT * FROM usage_logs
-       WHERE user_id = ? AND service_code = 'agent_itinerary'
+       WHERE user_id = $1 AND service_code = 'agent_itinerary'
          AND status = 'success'
        ORDER BY id DESC LIMIT 1`,
       [agentUserId],
@@ -458,7 +458,7 @@ describe('Fase 5 — agentes multi-paso', () => {
     compareRunId = response.body.run.id;
 
     const [runRows] = await pool.execute(
-      'SELECT * FROM agent_runs WHERE id = ?',
+      'SELECT * FROM agent_runs WHERE id = $1',
       [compareRunId],
     );
     expect(runRows[0].service_code).toBe('agent_compare');
@@ -511,7 +511,7 @@ describe('Fase 5 — agentes multi-paso', () => {
 
     const [usageRows] = await pool.execute(
       `SELECT * FROM usage_logs
-       WHERE user_id = ? AND status = 'blocked'
+       WHERE user_id = $1 AND status = 'blocked'
        ORDER BY id DESC LIMIT 1`,
       [lowQuotaUserId],
     );
@@ -519,7 +519,7 @@ describe('Fase 5 — agentes multi-paso', () => {
     expect(usageRows[0].error_code).toBe('TOKEN_QUOTA_EXCEEDED');
 
     const [runRows] = await pool.execute(
-      'SELECT COUNT(*) AS total FROM agent_runs WHERE user_id = ?',
+      'SELECT COUNT(*) AS total FROM agent_runs WHERE user_id = $1',
       [lowQuotaUserId],
     );
     expect(Number(runRows[0].total)).toBe(0);
@@ -535,7 +535,7 @@ describe('Fase 5 — agentes multi-paso', () => {
     );
 
     const [beforeRows] = await pool.execute(
-      'SELECT COUNT(*) AS total FROM conversations WHERE user_id = ?',
+      'SELECT COUNT(*) AS total FROM conversations WHERE user_id = $1',
       [agentUserId],
     );
 
@@ -548,14 +548,14 @@ describe('Fase 5 — agentes multi-paso', () => {
     expect(response.body.error.code).toBe('AI_UPSTREAM_ERROR');
 
     const [afterRows] = await pool.execute(
-      'SELECT COUNT(*) AS total FROM conversations WHERE user_id = ?',
+      'SELECT COUNT(*) AS total FROM conversations WHERE user_id = $1',
       [agentUserId],
     );
     expect(Number(afterRows[0].total)).toBe(Number(beforeRows[0].total));
 
     const [runRows] = await pool.execute(
       `SELECT * FROM agent_runs
-       WHERE user_id = ? AND status = 'error'
+       WHERE user_id = $1 AND status = 'error'
        ORDER BY id DESC LIMIT 1`,
       [agentUserId],
     );
@@ -567,7 +567,7 @@ describe('Fase 5 — agentes multi-paso', () => {
 
     const [usageRows] = await pool.execute(
       `SELECT * FROM usage_logs
-       WHERE user_id = ? AND status = 'error'
+       WHERE user_id = $1 AND status = 'error'
        ORDER BY id DESC LIMIT 1`,
       [agentUserId],
     );

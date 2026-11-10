@@ -71,11 +71,11 @@ async function getAgentService(code) {
 }
 
 async function getActiveDestinations(ids) {
-  const [rows] = await pool.query(
+  const [rows] = await pool.execute(
     `SELECT id, name, region, description, category, tags, lat, lng,
             price_level, best_season
      FROM destinations
-     WHERE id IN (?) AND active = 1`,
+     WHERE id = ANY($1::bigint[]) AND active = TRUE`,
     [ids],
   );
   const byId = new Map(rows.map((row) => [Number(row.id), row]));
@@ -120,7 +120,7 @@ async function persistAgentError({
       `INSERT INTO agent_runs
          (user_id, service_code, input_json, output_json, steps_json,
           status, total_tokens, latency_ms)
-       VALUES (?, ?, ?, ?, ?, 'error', ?, ?)`,
+       VALUES ($1, $2, $3::jsonb, $4::jsonb, $5::jsonb, 'error', $6, $7)`,
       [
         userId,
         serviceCode,
@@ -230,22 +230,25 @@ async function executeAgent({
     const [conversationResult] = await connection.execute(
       `INSERT INTO conversations
          (user_id, service_code, title, last_message_at)
-       VALUES (?, ?, ?, CURRENT_TIMESTAMP(6))`,
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+       RETURNING id`,
       [user.id, serviceCode, truncateTitle(title)],
     );
-    const conversationId = Number(conversationResult.insertId);
+    const conversationId = Number(conversationResult[0].id);
 
     const [userMessageResult] = await connection.execute(
       `INSERT INTO messages
          (conversation_id, role, content, tokens_in, tokens_out)
-       VALUES (?, 'user', ?, 0, 0)`,
+       VALUES ($1, 'user', $2, 0, 0)
+       RETURNING id`,
       [conversationId, userPrompt],
     );
 
     const [assistantMessageResult] = await connection.execute(
       `INSERT INTO messages
          (conversation_id, role, content, sources_json, tokens_in, tokens_out)
-       VALUES (?, 'assistant', ?, ?, ?, ?)`,
+       VALUES ($1, 'assistant', $2, $3::jsonb, $4, $5)
+       RETURNING id`,
       [
         conversationId,
         result.content,
@@ -265,7 +268,8 @@ async function executeAgent({
       `INSERT INTO agent_runs
          (user_id, service_code, input_json, output_json, steps_json,
           status, total_tokens, latency_ms)
-       VALUES (?, ?, ?, ?, ?, 'success', ?, ?)`,
+       VALUES ($1, $2, $3::jsonb, $4::jsonb, $5::jsonb, 'success', $6, $7)
+       RETURNING id`,
       [
         user.id,
         serviceCode,
@@ -282,7 +286,7 @@ async function executeAgent({
         userId: user.id,
         serviceCode,
         conversationId,
-        messageId: assistantMessageResult.insertId,
+        messageId: assistantMessageResult[0].id,
         model: service.model,
         promptTokens: result.usage.promptTokens,
         completionTokens: result.usage.completionTokens,
@@ -294,10 +298,10 @@ async function executeAgent({
     );
 
     return {
-      runId: Number(runResult.insertId),
+      runId: Number(runResult[0].id),
       conversationId,
-      userMessageId: Number(userMessageResult.insertId),
-      assistantMessageId: Number(assistantMessageResult.insertId),
+      userMessageId: Number(userMessageResult[0].id),
+      assistantMessageId: Number(assistantMessageResult[0].id),
     };
   });
 
@@ -403,17 +407,17 @@ export async function listAgentRuns(
   userId,
   { page, limit, serviceCode, status },
 ) {
-  const conditions = ['user_id = ?'];
   const params = [userId];
+  const conditions = ['user_id = $1'];
 
   if (serviceCode) {
-    conditions.push('service_code = ?');
     params.push(serviceCode);
+    conditions.push(`service_code = $${params.length}`);
   }
 
   if (status) {
-    conditions.push('status = ?');
     params.push(status);
+    conditions.push(`status = $${params.length}`);
   }
 
   const where = `WHERE ${conditions.join(' AND ')}`;
@@ -438,7 +442,7 @@ export async function listAgentRuns(
 
 export async function getAgentRun(userId, runId) {
   const [rows] = await pool.execute(
-    'SELECT * FROM agent_runs WHERE id = ? AND user_id = ? LIMIT 1',
+    'SELECT * FROM agent_runs WHERE id = $1 AND user_id = $2 LIMIT 1',
     [runId, userId],
   );
 

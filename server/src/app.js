@@ -4,6 +4,9 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { env } from './config/env.js';
 import { APP_NAME, APP_VERSION, API_PREFIX } from './config/constants.js';
@@ -13,6 +16,7 @@ import { requestId } from './middleware/requestId.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 const app = express();
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
@@ -108,6 +112,14 @@ app.get('/', (_req, res) => {
   });
 });
 
+// Alias cortos para enlaces de entrega: /api-docs y /docs
+for (const alias of ['/api-docs', '/docs']) {
+  app.get(alias, (_req, res) => res.redirect(301, `${API_PREFIX}/docs`));
+  app.get(`${alias}/*splat`, (_req, res) =>
+    res.redirect(301, `${API_PREFIX}/docs`),
+  );
+}
+
 // Documentación OpenAPI
 app.get(`${API_PREFIX}/docs.json`, (_req, res) => {
   res.json(openapiSpec);
@@ -137,6 +149,26 @@ app.use(
 );
 
 app.use(API_PREFIX, apiRouter);
+
+// ---------------------------------------------------------------
+// Frontend compilado (Vite). Si existe client/dist se sirve desde el
+// mismo servicio, de modo que la app y la API comparten dominio.
+// ---------------------------------------------------------------
+const clientDist = path.resolve(currentDir, '../../client/dist');
+
+if (fs.existsSync(path.join(clientDist, 'index.html'))) {
+  app.use(
+    express.static(clientDist, {
+      index: false,
+      maxAge: env.NODE_ENV === 'production' ? '1h' : 0,
+    }),
+  );
+
+  // Fallback de la SPA: cualquier ruta que no sea API devuelve index.html.
+  app.get(/^\/(?!api\/).*/, (_req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+}
 
 app.use(notFound);
 app.use(errorHandler);

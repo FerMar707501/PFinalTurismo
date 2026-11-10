@@ -23,9 +23,10 @@ export function serializeService(row, { includeSystemPrompt = false } = {}) {
 }
 
 export async function listServices({ isAdmin = false } = {}) {
+  const where = isAdmin ? '' : 'WHERE enabled = TRUE';
   const [rows] = await pool.execute(
     `SELECT * FROM ai_services
-     ${isAdmin ? '' : 'WHERE enabled = 1'}
+     ${where}
      ORDER BY id ASC`,
   );
 
@@ -36,7 +37,7 @@ export async function listServices({ isAdmin = false } = {}) {
 
 export async function getServiceByCode(code, { isAdmin = false } = {}) {
   const [rows] = await pool.execute(
-    'SELECT * FROM ai_services WHERE code = ? LIMIT 1',
+    'SELECT * FROM ai_services WHERE code = $1 LIMIT 1',
     [code],
   );
 
@@ -51,7 +52,7 @@ export async function getServiceByCode(code, { isAdmin = false } = {}) {
 
 export async function updateService(code, data, { isAdmin = true } = {}) {
   const [rows] = await pool.execute(
-    'SELECT id FROM ai_services WHERE code = ? LIMIT 1',
+    'SELECT id FROM ai_services WHERE code = $1 LIMIT 1',
     [code],
   );
 
@@ -74,10 +75,8 @@ export async function updateService(code, data, { isAdmin = true } = {}) {
 
   for (const [key, column] of Object.entries(fieldMap)) {
     if (data[key] !== undefined) {
-      updates.push(`${column} = ?`);
-      params.push(
-        typeof data[key] === 'boolean' ? (data[key] ? 1 : 0) : data[key],
-      );
+      params.push(data[key]);
+      updates.push(`${column} = $${params.length}`);
     }
   }
 
@@ -85,9 +84,11 @@ export async function updateService(code, data, { isAdmin = true } = {}) {
     throw AppError.badRequest('No hay campos para actualizar.');
   }
 
+  params.push(code);
+
   await pool.execute(
-    `UPDATE ai_services SET ${updates.join(', ')} WHERE code = ?`,
-    [...params, code],
+    `UPDATE ai_services SET ${updates.join(', ')} WHERE code = $${params.length}`,
+    params,
   );
 
   return getServiceByCode(code, { isAdmin });

@@ -37,34 +37,34 @@ beforeAll(async () => {
 afterAll(async () => {
   try {
     await pool.execute(
-      "UPDATE ai_services SET enabled = 1 WHERE code = 'chat_rag'",
+      "UPDATE ai_services SET enabled = TRUE WHERE code = 'chat_rag'",
     );
 
     if (destinationId) {
       const [activities] = await pool.execute(
-        'SELECT id FROM activities WHERE destination_id = ?',
+        'SELECT id FROM activities WHERE destination_id = $1',
         [destinationId],
       );
       const activityIds = activities.map((activity) => Number(activity.id));
 
       if (activityIds.length > 0) {
         await pool.query(
-          "DELETE FROM documents WHERE source_type = 'activity' AND source_id IN (?)",
+          "DELETE FROM documents WHERE source_type = 'activity' AND source_id = ANY($1::bigint[])",
           [activityIds],
         );
       }
 
       await pool.execute(
-        "DELETE FROM documents WHERE source_type = 'destination' AND source_id = ?",
+        "DELETE FROM documents WHERE source_type = 'destination' AND source_id = $1",
         [destinationId],
       );
-      await pool.execute('DELETE FROM destinations WHERE id = ?', [
+      await pool.execute('DELETE FROM destinations WHERE id = $1', [
         destinationId,
       ]);
     }
 
     if (testUserEmail) {
-      await pool.execute('DELETE FROM users WHERE email = ?', [
+      await pool.execute('DELETE FROM users WHERE email = $1', [
         testUserEmail,
       ]);
     }
@@ -344,11 +344,11 @@ describe('Fase 3 — catálogo y sincronización RAG', () => {
     expect(response.body.name).toBe(updatedName);
 
     const [destinationDocs] = await pool.execute(
-      "SELECT title FROM documents WHERE source_type = 'destination' AND source_id = ?",
+      "SELECT title FROM documents WHERE source_type = 'destination' AND source_id = $1",
       [destinationId],
     );
     const [activityDocs] = await pool.execute(
-      "SELECT title FROM documents WHERE source_type = 'activity' AND source_id = ?",
+      "SELECT title FROM documents WHERE source_type = 'activity' AND source_id = $1",
       [activityId],
     );
 
@@ -376,7 +376,7 @@ describe('Fase 3 — catálogo y sincronización RAG', () => {
     const [docs] = await pool.execute(
       `SELECT title, content
        FROM documents
-       WHERE source_type = 'activity' AND source_id = ?`,
+       WHERE source_type = 'activity' AND source_id = $1`,
       [activityId],
     );
 
@@ -404,7 +404,7 @@ describe('Fase 3 — catálogo y sincronización RAG', () => {
     expect(adminResponse.body.active).toBe(false);
 
     const [docs] = await pool.execute(
-      "SELECT COUNT(*) AS total FROM documents WHERE source_type = 'activity' AND source_id = ?",
+      "SELECT COUNT(*) AS total FROM documents WHERE source_type = 'activity' AND source_id = $1",
       [activityId],
     );
     expect(Number(docs[0].total)).toBe(0);
@@ -432,8 +432,8 @@ describe('Fase 3 — catálogo y sincronización RAG', () => {
     const [docs] = await pool.execute(
       `SELECT COUNT(*) AS total
        FROM documents
-       WHERE (source_type = 'destination' AND source_id = ?)
-          OR (source_type = 'activity' AND source_id = ?)`,
+       WHERE (source_type = 'destination' AND source_id = $1)
+          OR (source_type = 'activity' AND source_id = $2)`,
       [destinationId, activityId],
     );
     expect(Number(docs[0].total)).toBe(0);

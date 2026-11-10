@@ -12,12 +12,16 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(4000),
 
-  DB_HOST: z.string().min(1),
-  DB_PORT: z.coerce.number().int().min(1).max(65535).default(3306),
-  DB_USER: z.string().min(1),
-  DB_PASSWORD: z.string().min(1),
-  DB_NAME: z.string().min(1),
+  DB_HOST: z.string().min(1).default('localhost'),
+  DB_PORT: z.coerce.number().int().min(1).max(65535).default(5432),
+  DB_USER: z.string().min(1).default('rutaia'),
+  DB_PASSWORD: z.string().default(''),
+  DB_NAME: z.string().min(1).default('rutaia'),
   DB_CONNECTION_LIMIT: z.coerce.number().int().min(1).max(50).default(10),
+  // Cadena completa de PostgreSQL; sustituye a las variables DB_* anteriores.
+  DATABASE_URL: z.string().optional(),
+  // En producción normalmente se requiere TLS (Render lo exige).
+  DATABASE_SSL: z.enum(['true', 'false']).optional(),
 
   JWT_SECRET: z.string().min(16, 'debe tener al menos 16 caracteres'),
   JWT_EXPIRES_IN: z.string().min(1).default('1h'),
@@ -29,6 +33,9 @@ const envSchema = z.object({
   GROQ_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.2),
 
   CORS_ORIGIN: z.string().min(1).default('http://localhost:5173'),
+  // Opcional: si el frontend se sirve desde el mismo dominio (un solo servicio
+  // de Render), estas rutas se resuelven igualmente sin depender de CORS.
+  PUBLIC_WEB_URL: z.string().optional(),
   TOKEN_QUOTA_DEFAULT: z.coerce.number().int().min(1).default(50000),
 });
 

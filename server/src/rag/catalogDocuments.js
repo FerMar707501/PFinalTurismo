@@ -59,14 +59,14 @@ async function upsertDestinationDocument(
     activityCount: activities.length,
   };
 
-  await connection.execute(
+  await connection.query(
     `INSERT INTO documents
        (source_type, source_id, chunk_index, title, content, metadata)
-     VALUES ('destination', ?, 0, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE
-       title = VALUES(title),
-       content = VALUES(content),
-       metadata = VALUES(metadata),
+     VALUES ('destination', $1, 0, $2, $3, $4::jsonb)
+     ON CONFLICT (source_type, source_id, chunk_index) DO UPDATE SET
+       title = EXCLUDED.title,
+       content = EXCLUDED.content,
+       metadata = EXCLUDED.metadata,
        updated_at = CURRENT_TIMESTAMP`,
     [
       destination.id,
@@ -89,14 +89,14 @@ async function upsertActivityDocument(connection, activity, destination) {
     lng: activity.lng,
   };
 
-  await connection.execute(
+  await connection.query(
     `INSERT INTO documents
        (source_type, source_id, chunk_index, title, content, metadata)
-     VALUES ('activity', ?, 0, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE
-       title = VALUES(title),
-       content = VALUES(content),
-       metadata = VALUES(metadata),
+     VALUES ('activity', $1, 0, $2, $3, $4::jsonb)
+     ON CONFLICT (source_type, source_id, chunk_index) DO UPDATE SET
+       title = EXCLUDED.title,
+       content = EXCLUDED.content,
+       metadata = EXCLUDED.metadata,
        updated_at = CURRENT_TIMESTAMP`,
     [
       activity.id,
@@ -110,7 +110,7 @@ async function upsertActivityDocument(connection, activity, destination) {
 export async function deleteDestinationDocuments(connection, destinationId) {
   await connection.execute(
     `DELETE FROM documents
-     WHERE source_type = 'destination' AND source_id = ?`,
+     WHERE source_type = 'destination' AND source_id = $1`,
     [destinationId],
   );
 
@@ -118,7 +118,7 @@ export async function deleteDestinationDocuments(connection, destinationId) {
     `DELETE FROM documents
      WHERE source_type = 'activity'
        AND source_id IN (
-         SELECT id FROM activities WHERE destination_id = ?
+         SELECT id FROM activities WHERE destination_id = $1
        )`,
     [destinationId],
   );
@@ -129,7 +129,7 @@ export async function syncDestinationDocument(connection, destinationId) {
     `SELECT id, name, region, description, category, tags, lat, lng,
             price_level, best_season, active
      FROM destinations
-     WHERE id = ?`,
+     WHERE id = $1`,
     [destinationId],
   );
 
@@ -144,7 +144,7 @@ export async function syncDestinationDocument(connection, destinationId) {
     `SELECT id, destination_id, name, description, category,
             duration_min, price, lat, lng, active
      FROM activities
-     WHERE destination_id = ?
+     WHERE destination_id = $1
      ORDER BY id`,
     [destinationId],
   );
@@ -170,7 +170,7 @@ export async function syncDestinationDocument(connection, destinationId) {
   if (inactiveIds.length > 0) {
     await connection.query(
       `DELETE FROM documents
-       WHERE source_type = 'activity' AND source_id IN (?)`,
+       WHERE source_type = 'activity' AND source_id = ANY($1::bigint[])`,
       [inactiveIds],
     );
   }

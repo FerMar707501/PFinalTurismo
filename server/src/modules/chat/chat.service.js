@@ -75,7 +75,7 @@ async function getOwnedConversation(userId, conversationId) {
   const [rows] = await pool.execute(
     `SELECT *
      FROM conversations
-     WHERE id = ? AND user_id = ? AND service_code = ?
+     WHERE id = $1 AND user_id = $2 AND service_code = $3
      LIMIT 1`,
     [conversationId, userId, CHAT_SERVICE_CODE],
   );
@@ -91,7 +91,7 @@ async function getConversationHistory(conversationId) {
   const [rows] = await pool.execute(
     `SELECT role, content
      FROM messages
-     WHERE conversation_id = ? AND role IN ('user', 'assistant')
+     WHERE conversation_id = $1 AND role IN ('user', 'assistant')
      ORDER BY id DESC
      LIMIT ${HISTORY_LIMIT}`,
     [conversationId],
@@ -285,19 +285,20 @@ export async function sendChatMessage(user, { message, conversationId }) {
       const [conversationResult] = await connection.execute(
         `INSERT INTO conversations
            (user_id, service_code, title, last_message_at)
-         VALUES (?, ?, ?, CURRENT_TIMESTAMP(6))`,
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         RETURNING id`,
         [user.id, CHAT_SERVICE_CODE, title],
       );
 
-      finalConversationId = Number(conversationResult.insertId);
+      finalConversationId = Number(conversationResult[0].id);
     } else {
       finalConversationId = Number(existingConversation.id);
 
       await connection.execute(
         `UPDATE conversations
-         SET title = COALESCE(title, ?),
-             last_message_at = CURRENT_TIMESTAMP(6)
-         WHERE id = ?`,
+         SET title = COALESCE(title, $1),
+             last_message_at = CURRENT_TIMESTAMP
+         WHERE id = $2`,
         [title, finalConversationId],
       );
     }
@@ -305,14 +306,16 @@ export async function sendChatMessage(user, { message, conversationId }) {
     const [userMessageResult] = await connection.execute(
       `INSERT INTO messages
          (conversation_id, role, content, tokens_in, tokens_out)
-       VALUES (?, 'user', ?, 0, 0)`,
+       VALUES ($1, 'user', $2, 0, 0)
+       RETURNING id`,
       [finalConversationId, message],
     );
 
     const [assistantMessageResult] = await connection.execute(
       `INSERT INTO messages
          (conversation_id, role, content, sources_json, tokens_in, tokens_out)
-       VALUES (?, 'assistant', ?, ?, ?, ?)`,
+       VALUES ($1, 'assistant', $2, $3::jsonb, $4, $5)
+       RETURNING id`,
       [
         finalConversationId,
         answer,
@@ -327,7 +330,7 @@ export async function sendChatMessage(user, { message, conversationId }) {
         userId: user.id,
         serviceCode: CHAT_SERVICE_CODE,
         conversationId: finalConversationId,
-        messageId: assistantMessageResult.insertId,
+        messageId: assistantMessageResult[0].id,
         model: completion.model ?? service.model,
         promptTokens,
         completionTokens,
@@ -340,8 +343,8 @@ export async function sendChatMessage(user, { message, conversationId }) {
 
     return {
       conversationId: finalConversationId,
-      userMessageId: Number(userMessageResult.insertId),
-      assistantMessageId: Number(assistantMessageResult.insertId),
+      userMessageId: Number(userMessageResult[0].id),
+      assistantMessageId: Number(assistantMessageResult[0].id),
     };
   });
 
@@ -350,8 +353,8 @@ export async function sendChatMessage(user, { message, conversationId }) {
     stored.conversationId,
   );
   const [messageRows] = await pool.execute(
-    `SELECT * FROM messages WHERE id IN (?, ?) ORDER BY id ASC`,
-    [stored.userMessageId, stored.assistantMessageId],
+    `SELECT * FROM messages WHERE id = ANY($1::bigint[]) ORDER BY id ASC`,
+    [[stored.userMessageId, stored.assistantMessageId]],
   );
   const userMessage = messageRows.find(
     (item) => Number(item.id) === stored.userMessageId,
@@ -378,16 +381,17 @@ export async function sendChatMessage(user, { message, conversationId }) {
 }
 
 export async function listConversations(userId, { page, limit, search }) {
-  const conditions = ['c.user_id = ?', 'c.service_code = ?'];
+  const conditions = ['c.user_id = $1', 'c.service_code = $2'];
   const params = [userId, CHAT_SERVICE_CODE];
 
   if (search) {
-    conditions.push('c.title LIKE ?');
     params.push(`%${search}%`);
+    conditions.push(`c.title ILIKE $${params.length}`);
   }
 
   const where = `WHERE ${conditions.join(' AND ')}`;
   const offset = (page - 1) * limit;
+  // El conteo reutiliza el mismo WHERE y los mismos parámetros.
 
   const [countRows] = await pool.execute(
     `SELECT COUNT(*) AS total FROM conversations c ${where}`,
@@ -419,14 +423,14 @@ export async function getConversation(userId, conversationId, { limit }) {
   const conversation = await getOwnedConversation(userId, conversationId);
   const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const [countRows] = await pool.execute(
-    'SELECT COUNT(*) AS total FROM messages WHERE conversation_id = ?',
+    'SELECT COUNT(*) AS total FROM messages WHERE conversation_id = $1',
     [conversationId],
   );
   const [rows] = await pool.execute(
     `SELECT *
      FROM (
        SELECT * FROM messages
-       WHERE conversation_id = ?
+       WHERE conversation_id = $1
        ORDER BY id DESC
        LIMIT ${safeLimit}
      ) recent

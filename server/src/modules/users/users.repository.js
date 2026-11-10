@@ -21,7 +21,7 @@ function selectColumns(includePassword = false) {
 
 export async function findUserRecordById(id) {
   const [rows] = await pool.execute(
-    `SELECT ${selectColumns(false)} FROM users WHERE id = ? LIMIT 1`,
+    `SELECT ${selectColumns(false)} FROM users WHERE id = $1 LIMIT 1`,
     [id],
   );
 
@@ -30,7 +30,7 @@ export async function findUserRecordById(id) {
 
 export async function findUserRecordByEmail(email) {
   const [rows] = await pool.execute(
-    `SELECT ${selectColumns(true)} FROM users WHERE email = ? LIMIT 1`,
+    `SELECT ${selectColumns(true)} FROM users WHERE email = $1 LIMIT 1`,
     [email],
   );
 

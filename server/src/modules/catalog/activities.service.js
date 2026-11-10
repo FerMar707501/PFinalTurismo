@@ -6,7 +6,7 @@ import { serializeActivity } from './catalog.serializers.js';
 
 async function findActivityRecord(id) {
   const [rows] = await pool.execute(
-    'SELECT * FROM activities WHERE id = ? LIMIT 1',
+    'SELECT * FROM activities WHERE id = $1 LIMIT 1',
     [id],
   );
 
@@ -15,24 +15,19 @@ async function findActivityRecord(id) {
 
 async function findDestinationRecord(id) {
   const [rows] = await pool.execute(
-    'SELECT id, name, active FROM destinations WHERE id = ? LIMIT 1',
+    'SELECT id, name, active FROM destinations WHERE id = $1 LIMIT 1',
     [id],
   );
 
   return rows[0] ?? null;
 }
 
-async function ensureUniqueActivity(
-  destinationId,
-  name,
-  excludeId = null,
-) {
+async function ensureUniqueActivity(destinationId, name, excludeId = null) {
   const params = [destinationId, name];
-  let sql =
-    'SELECT id FROM activities WHERE destination_id = ? AND name = ?';
+  let sql = 'SELECT id FROM activities WHERE destination_id = $1 AND name = $2';
 
   if (excludeId !== null) {
-    sql += ' AND id <> ?';
+    sql += ' AND id <> $3';
     params.push(excludeId);
   }
 
@@ -53,24 +48,28 @@ export async function listActivities(filters, { isAdmin = false } = {}) {
   const { page, limit, search, destinationId, category, active } = filters;
   const conditions = [];
   const params = [];
+  const next = () => `$${params.length + 1}`;
 
   if (!isAdmin) {
-    conditions.push('a.active = 1', 'd.active = 1');
+    conditions.push('a.active = TRUE', 'd.active = TRUE');
   } else if (active !== undefined) {
-    conditions.push('a.active = ?');
-    params.push(active ? 1 : 0);
+    conditions.push(`a.active = ${next()}`);
+    params.push(Boolean(active));
   }
 
   if (search) {
-    conditions.push('(a.name LIKE ? OR a.description LIKE ?)');
-    params.push(`%${search}%`, `%${search}%`);
+    const a = next();
+    params.push(`%${search}%`);
+    const b = next();
+    params.push(`%${search}%`);
+    conditions.push(`(a.name ILIKE ${a} OR a.description ILIKE ${b})`);
   }
   if (destinationId !== undefined) {
-    conditions.push('a.destination_id = ?');
+    conditions.push(`a.destination_id = ${next()}`);
     params.push(destinationId);
   }
   if (category) {
-    conditions.push('a.category = ?');
+    conditions.push(`a.category = ${next()}`);
     params.push(category);
   }
 
@@ -114,7 +113,7 @@ export async function getActivityById(id, { isAdmin = false } = {}) {
        d.active AS destination_active
      FROM activities a
      JOIN destinations d ON d.id = a.destination_id
-     WHERE a.id = ?`,
+     WHERE a.id = $1`,
     [id],
   );
 
@@ -140,11 +139,12 @@ export async function createActivity(data) {
   await ensureUniqueActivity(data.destinationId, data.name);
 
   const activityId = await withTransaction(async (connection) => {
-    const [result] = await connection.execute(
+    const { rows } = await connection.query(
       `INSERT INTO activities
          (destination_id, name, description, category,
           duration_min, price, lat, lng, active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id`,
       [
         data.destinationId,
         data.name,
@@ -154,12 +154,12 @@ export async function createActivity(data) {
         data.price,
         data.lat ?? null,
         data.lng ?? null,
-        data.active ? 1 : 0,
+        Boolean(data.active),
       ],
     );
 
     await syncDestinationDocument(connection, data.destinationId);
-    return result.insertId;
+    return Number(rows[0].id);
   });
 
   return getActivityById(activityId, { isAdmin: true });
@@ -186,42 +186,43 @@ export async function updateActivity(id, data) {
 
   const updates = [];
   const params = [];
+  const slot = () => `$${params.length + 1}`;
 
   if (data.destinationId !== undefined) {
-    updates.push('destination_id = ?');
+    updates.push(`destination_id = ${slot()}`);
     params.push(data.destinationId);
   }
   if (data.name !== undefined) {
-    updates.push('name = ?');
+    updates.push(`name = ${slot()}`);
     params.push(data.name);
   }
   if (data.description !== undefined) {
-    updates.push('description = ?');
+    updates.push(`description = ${slot()}`);
     params.push(data.description);
   }
   if (data.category !== undefined) {
-    updates.push('category = ?');
+    updates.push(`category = ${slot()}`);
     params.push(data.category);
   }
   if (data.durationMin !== undefined) {
-    updates.push('duration_min = ?');
+    updates.push(`duration_min = ${slot()}`);
     params.push(data.durationMin);
   }
   if (data.price !== undefined) {
-    updates.push('price = ?');
+    updates.push(`price = ${slot()}`);
     params.push(data.price);
   }
   if (data.lat !== undefined) {
-    updates.push('lat = ?');
+    updates.push(`lat = ${slot()}`);
     params.push(data.lat);
   }
   if (data.lng !== undefined) {
-    updates.push('lng = ?');
+    updates.push(`lng = ${slot()}`);
     params.push(data.lng);
   }
   if (data.active !== undefined) {
-    updates.push('active = ?');
-    params.push(data.active ? 1 : 0);
+    updates.push(`active = ${slot()}`);
+    params.push(Boolean(data.active));
   }
 
   if (updates.length === 0) {
@@ -229,8 +230,8 @@ export async function updateActivity(id, data) {
   }
 
   await withTransaction(async (connection) => {
-    await connection.execute(
-      `UPDATE activities SET ${updates.join(', ')} WHERE id = ?`,
+    await connection.query(
+      `UPDATE activities SET ${updates.join(', ')} WHERE id = $${params.length + 1}`,
       [...params, id],
     );
 
@@ -255,8 +256,8 @@ export async function deactivateActivity(id) {
   }
 
   await withTransaction(async (connection) => {
-    await connection.execute(
-      'UPDATE activities SET active = 0 WHERE id = ?',
+    await connection.query(
+      'UPDATE activities SET active = FALSE WHERE id = $1',
       [id],
     );
     await syncDestinationDocument(connection, current.destination_id);

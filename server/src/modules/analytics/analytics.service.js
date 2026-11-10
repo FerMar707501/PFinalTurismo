@@ -65,7 +65,7 @@ export function buildListParams(range, { serviceCode } = {}) {
 }
 
 function serviceFilter(serviceCode) {
-  return serviceCode ? 'AND ul.service_code = ?' : '';
+  return serviceCode ? 'AND ul.service_code = $3' : '';
 }
 
 function mapTotals(row = {}) {
@@ -87,9 +87,9 @@ async function getTotals(range, filters) {
   const [rows] = await pool.execute(
     `SELECT
        COUNT(*) AS requests,
-       COALESCE(SUM(ul.status = 'success'), 0) AS successful_requests,
-       COALESCE(SUM(ul.status = 'blocked'), 0) AS blocked_requests,
-       COALESCE(SUM(ul.status = 'error'), 0) AS error_requests,
+       COALESCE(SUM(CASE WHEN ul.status = 'success' THEN 1 ELSE 0 END), 0) AS successful_requests,
+       COALESCE(SUM(CASE WHEN ul.status = 'blocked' THEN 1 ELSE 0 END), 0) AS blocked_requests,
+       COALESCE(SUM(CASE WHEN ul.status = 'error' THEN 1 ELSE 0 END), 0) AS error_requests,
        COALESCE(SUM(ul.prompt_tokens), 0) AS prompt_tokens,
        COALESCE(SUM(ul.completion_tokens), 0) AS completion_tokens,
        COALESCE(SUM(ul.total_tokens), 0) AS total_tokens,
@@ -97,7 +97,7 @@ async function getTotals(range, filters) {
        COALESCE(ROUND(AVG(ul.latency_ms)), 0) AS average_latency_ms,
        COUNT(DISTINCT ul.user_id) AS active_users
      FROM usage_logs ul
-     WHERE ul.created_at >= ? AND ul.created_at < ?
+     WHERE ul.created_at >= $1 AND ul.created_at < $2
        ${serviceFilter(filters.serviceCode)}`,
     buildListParams(range, filters),
   );
@@ -110,9 +110,9 @@ async function getByService(range, filters) {
     `SELECT
        ul.service_code,
        COUNT(*) AS requests,
-       COALESCE(SUM(ul.status = 'success'), 0) AS successful_requests,
-       COALESCE(SUM(ul.status = 'blocked'), 0) AS blocked_requests,
-       COALESCE(SUM(ul.status = 'error'), 0) AS error_requests,
+       COALESCE(SUM(CASE WHEN ul.status = 'success' THEN 1 ELSE 0 END), 0) AS successful_requests,
+       COALESCE(SUM(CASE WHEN ul.status = 'blocked' THEN 1 ELSE 0 END), 0) AS blocked_requests,
+       COALESCE(SUM(CASE WHEN ul.status = 'error' THEN 1 ELSE 0 END), 0) AS error_requests,
        COALESCE(SUM(ul.prompt_tokens), 0) AS prompt_tokens,
        COALESCE(SUM(ul.completion_tokens), 0) AS completion_tokens,
        COALESCE(SUM(ul.total_tokens), 0) AS total_tokens,
@@ -120,7 +120,7 @@ async function getByService(range, filters) {
        COALESCE(ROUND(AVG(ul.latency_ms)), 0) AS average_latency_ms,
        COUNT(DISTINCT ul.user_id) AS active_users
      FROM usage_logs ul
-     WHERE ul.created_at >= ? AND ul.created_at < ?
+     WHERE ul.created_at >= $1 AND ul.created_at < $2
        ${serviceFilter(filters.serviceCode)}
      GROUP BY ul.service_code
      ORDER BY total_tokens DESC, requests DESC, ul.service_code ASC`,
@@ -136,17 +136,17 @@ async function getByService(range, filters) {
 async function getDailySeries(range, filters) {
   const [rows] = await pool.execute(
     `SELECT
-       DATE(ul.created_at) AS date,
+       to_char(ul.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date,
        COUNT(*) AS requests,
-       COALESCE(SUM(ul.status = 'success'), 0) AS successful_requests,
-       COALESCE(SUM(ul.status = 'blocked'), 0) AS blocked_requests,
+       COALESCE(SUM(CASE WHEN ul.status = 'success' THEN 1 ELSE 0 END), 0) AS successful_requests,
+       COALESCE(SUM(CASE WHEN ul.status = 'blocked' THEN 1 ELSE 0 END), 0) AS blocked_requests,
        COALESCE(SUM(ul.total_tokens), 0) AS total_tokens,
        COALESCE(SUM(ul.prompt_tokens), 0) AS prompt_tokens,
        COALESCE(SUM(ul.completion_tokens), 0) AS completion_tokens
      FROM usage_logs ul
-     WHERE ul.created_at >= ? AND ul.created_at < ?
+     WHERE ul.created_at >= $1 AND ul.created_at < $2
        ${serviceFilter(filters.serviceCode)}
-     GROUP BY DATE(ul.created_at)
+     GROUP BY to_char(ul.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD')
      ORDER BY date ASC`,
     buildListParams(range, filters),
   );
@@ -165,17 +165,17 @@ async function getDailySeries(range, filters) {
 async function getMonthlySeries(range, filters) {
   const [rows] = await pool.execute(
     `SELECT
-       DATE_FORMAT(ul.created_at, '%Y-%m') AS month,
+       to_char(ul.created_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month,
        COUNT(*) AS requests,
-       COALESCE(SUM(ul.status = 'success'), 0) AS successful_requests,
-       COALESCE(SUM(ul.status = 'blocked'), 0) AS blocked_requests,
+       COALESCE(SUM(CASE WHEN ul.status = 'success' THEN 1 ELSE 0 END), 0) AS successful_requests,
+       COALESCE(SUM(CASE WHEN ul.status = 'blocked' THEN 1 ELSE 0 END), 0) AS blocked_requests,
        COALESCE(SUM(ul.total_tokens), 0) AS total_tokens,
        COALESCE(SUM(ul.prompt_tokens), 0) AS prompt_tokens,
        COALESCE(SUM(ul.completion_tokens), 0) AS completion_tokens
      FROM usage_logs ul
-     WHERE ul.created_at >= ? AND ul.created_at < ?
+     WHERE ul.created_at >= $1 AND ul.created_at < $2
        ${serviceFilter(filters.serviceCode)}
-     GROUP BY DATE_FORMAT(ul.created_at, '%Y-%m')
+     GROUP BY to_char(ul.created_at AT TIME ZONE 'UTC', 'YYYY-MM')
      ORDER BY month ASC`,
     buildListParams(range, filters),
   );
@@ -200,13 +200,13 @@ async function getByUser(range, filters) {
        u.role,
        COALESCE(SUM(ul.total_tokens), 0) AS total_tokens,
        COUNT(*) AS requests,
-       COALESCE(SUM(ul.status = 'success'), 0) AS successful_requests,
-       COALESCE(SUM(ul.status = 'blocked'), 0) AS blocked_requests,
-       COALESCE(SUM(ul.status = 'error'), 0) AS error_requests,
+       COALESCE(SUM(CASE WHEN ul.status = 'success' THEN 1 ELSE 0 END), 0) AS successful_requests,
+       COALESCE(SUM(CASE WHEN ul.status = 'blocked' THEN 1 ELSE 0 END), 0) AS blocked_requests,
+       COALESCE(SUM(CASE WHEN ul.status = 'error' THEN 1 ELSE 0 END), 0) AS error_requests,
        COALESCE(ROUND(AVG(ul.latency_ms)), 0) AS average_latency_ms
      FROM usage_logs ul
      JOIN users u ON u.id = ul.user_id
-     WHERE ul.created_at >= ? AND ul.created_at < ?
+     WHERE ul.created_at >= $1 AND ul.created_at < $2
        ${serviceFilter(filters.serviceCode)}
      GROUP BY ul.user_id, u.name, u.email, u.role
      ORDER BY total_tokens DESC, requests DESC
@@ -294,7 +294,7 @@ export async function getUsageCsv(query = {}) {
   const filters = { serviceCode: query.serviceCode || null };
   const [rows] = await pool.execute(
     `SELECT
-       DATE(ul.created_at) AS date,
+       to_char(ul.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date,
        ul.service_code,
        ul.model,
        u.name AS user_name,
@@ -307,9 +307,9 @@ export async function getUsageCsv(query = {}) {
        COALESCE(ROUND(AVG(ul.latency_ms)), 0) AS average_latency_ms
      FROM usage_logs ul
      JOIN users u ON u.id = ul.user_id
-     WHERE ul.created_at >= ? AND ul.created_at < ?
+     WHERE ul.created_at >= $1 AND ul.created_at < $2
        ${serviceFilter(filters.serviceCode)}
-     GROUP BY DATE(ul.created_at), ul.service_code, ul.model, u.id,
+     GROUP BY to_char(ul.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), ul.service_code, ul.model, u.id,
               u.name, u.email, ul.status
      ORDER BY date ASC, ul.service_code ASC, u.email ASC, ul.status ASC`,
     buildListParams(range, filters),
@@ -376,7 +376,7 @@ export async function authenticateApiClient(apiKey) {
   const [rows] = await pool.execute(
     `SELECT id, name, scope, active
      FROM api_clients
-     WHERE key_hash = ?
+     WHERE key_hash = $1
      LIMIT 1`,
     [hash],
   );
@@ -405,7 +405,7 @@ export async function authenticateApiClient(apiKey) {
   }
 
   await pool.execute(
-    'UPDATE api_clients SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?',
+    'UPDATE api_clients SET last_used_at = CURRENT_TIMESTAMP WHERE id = $1',
     [client.id],
   );
 
@@ -441,12 +441,13 @@ export async function createApiClient({ name, scope = 'analytics:read' }) {
 
   const [result] = await pool.execute(
     `INSERT INTO api_clients (name, key_hash, key_prefix, scope, active)
-     VALUES (?, ?, ?, ?, 1)`,
+     VALUES ($1, $2, $3, $4, TRUE)
+     RETURNING id`,
     [name, keyHash, keyPrefix, scope],
   );
 
   return {
-    id: Number(result.insertId),
+    id: Number(result[0].id),
     name,
     keyPrefix,
     scope,
@@ -458,7 +459,7 @@ export async function createApiClient({ name, scope = 'analytics:read' }) {
 
 export async function setApiClientStatus(id, active) {
   const [rows] = await pool.execute(
-    'SELECT id, name FROM api_clients WHERE id = ? LIMIT 1',
+    'SELECT id, name FROM api_clients WHERE id = $1 LIMIT 1',
     [id],
   );
 
@@ -466,8 +467,8 @@ export async function setApiClientStatus(id, active) {
     throw AppError.notFound('Cliente de API no encontrado.');
   }
 
-  await pool.execute('UPDATE api_clients SET active = ? WHERE id = ?', [
-    active ? 1 : 0,
+  await pool.execute('UPDATE api_clients SET active = $1 WHERE id = $2', [
+    Boolean(active),
     id,
   ]);
 

@@ -17,13 +17,13 @@ describe('API base', () => {
     expect(response.body.health).toBe('/api/health');
   });
 
-  it('GET /api/health responde 200 y confirma MySQL', async () => {
+  it('GET /api/health responde 200 y confirma PostgreSQL', async () => {
     const response = await request(app).get('/api/health');
 
     expect(response.status).toBe(200);
     expect(response.body.status).toBe('ok');
     expect(response.body.database.status).toBe('up');
-    expect(response.body.database.version).toMatch(/^8\./);
+    expect(response.body.database.version).toMatch(/^PostgreSQL/);
     expect(response.headers['x-request-id']).toBeTruthy();
   });
 

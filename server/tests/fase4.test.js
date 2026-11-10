@@ -111,19 +111,19 @@ beforeEach(() => {
 afterAll(async () => {
   try {
     await pool.execute(
-      "UPDATE ai_services SET enabled = 1 WHERE code = 'chat_rag'",
+      "UPDATE ai_services SET enabled = TRUE WHERE code = 'chat_rag'",
     );
 
     const userIds = [chatUserId, lowQuotaUserId].filter(Boolean);
 
     if (userIds.length > 0) {
-      await pool.query('DELETE FROM usage_logs WHERE user_id IN (?)', [
+      await pool.query('DELETE FROM usage_logs WHERE user_id = ANY($1::bigint[])', [
         userIds,
       ]);
-      await pool.query('DELETE FROM conversations WHERE user_id IN (?)', [
+      await pool.query('DELETE FROM conversations WHERE user_id = ANY($1::bigint[])', [
         userIds,
       ]);
-      await pool.query('DELETE FROM users WHERE id IN (?)', [userIds]);
+      await pool.query('DELETE FROM users WHERE id = ANY($1::bigint[])', [userIds]);
     }
   } finally {
     await closePool();
@@ -187,13 +187,13 @@ describe('Fase 4 — chat RAG', () => {
     });
 
     const [conversationRows] = await pool.execute(
-      'SELECT * FROM conversations WHERE id = ?',
+      'SELECT * FROM conversations WHERE id = $1',
       [conversationId],
     );
     expect(Number(conversationRows[0].user_id)).toBe(chatUserId);
 
     const [messageRows] = await pool.execute(
-      'SELECT * FROM messages WHERE conversation_id = ? ORDER BY id ASC',
+      'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY id ASC',
       [conversationId],
     );
     expect(messageRows).toHaveLength(2);
@@ -209,7 +209,7 @@ describe('Fase 4 — chat RAG', () => {
 
     const [usageRows] = await pool.execute(
       `SELECT * FROM usage_logs
-       WHERE user_id = ? AND status = 'success'
+       WHERE user_id = $1 AND status = 'success'
        ORDER BY id DESC LIMIT 1`,
       [chatUserId],
     );
@@ -302,7 +302,7 @@ describe('Fase 4 — chat RAG', () => {
 
     const [usageRows] = await pool.execute(
       `SELECT * FROM usage_logs
-       WHERE user_id = ? AND status = 'blocked'
+       WHERE user_id = $1 AND status = 'blocked'
        ORDER BY id DESC LIMIT 1`,
       [lowQuotaUserId],
     );
@@ -322,7 +322,7 @@ describe('Fase 4 — chat RAG', () => {
     );
 
     const [beforeRows] = await pool.execute(
-      'SELECT COUNT(*) AS total FROM conversations WHERE user_id = ?',
+      'SELECT COUNT(*) AS total FROM conversations WHERE user_id = $1',
       [chatUserId],
     );
 
@@ -335,14 +335,14 @@ describe('Fase 4 — chat RAG', () => {
     expect(response.body.error.code).toBe('AI_UPSTREAM_ERROR');
 
     const [afterRows] = await pool.execute(
-      'SELECT COUNT(*) AS total FROM conversations WHERE user_id = ?',
+      'SELECT COUNT(*) AS total FROM conversations WHERE user_id = $1',
       [chatUserId],
     );
     expect(Number(afterRows[0].total)).toBe(Number(beforeRows[0].total));
 
     const [usageRows] = await pool.execute(
       `SELECT * FROM usage_logs
-       WHERE user_id = ? AND status = 'error'
+       WHERE user_id = $1 AND status = 'error'
        ORDER BY id DESC LIMIT 1`,
       [chatUserId],
     );
@@ -389,7 +389,7 @@ describe('Fase 4 — chat RAG', () => {
     const [usageRows] = await pool.execute(
       `SELECT COALESCE(SUM(total_tokens), 0) AS total
        FROM usage_logs
-       WHERE user_id = ? AND status = 'success'`,
+       WHERE user_id = $1 AND status = 'success'`,
       [chatUserId],
     );
 

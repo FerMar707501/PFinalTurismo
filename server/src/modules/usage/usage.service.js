@@ -49,10 +49,10 @@ export async function getQuotaForUser(user, period = getCurrentPeriod()) {
   const [rows] = await pool.execute(
     `SELECT
        COALESCE(SUM(CASE WHEN status = 'success' THEN total_tokens ELSE 0 END), 0) AS used_tokens,
-       COALESCE(SUM(status = 'success'), 0) AS successful_requests,
-       COALESCE(SUM(status = 'blocked'), 0) AS blocked_requests
+       COALESCE(SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END), 0) AS successful_requests,
+       COALESCE(SUM(CASE WHEN status = 'blocked' THEN 1 ELSE 0 END), 0) AS blocked_requests
      FROM usage_logs
-     WHERE user_id = ? AND created_at >= ? AND created_at < ?`,
+     WHERE user_id = $1 AND created_at >= $2 AND created_at < $3`,
     [Number(user.id), period.start, period.end],
   );
 
@@ -108,7 +108,8 @@ export async function recordUsage(
        (user_id, service_code, conversation_id, message_id, model,
         prompt_tokens, completion_tokens, total_tokens, latency_ms,
         status, error_code)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+     RETURNING id`,
     [
       userId,
       serviceCode,
@@ -124,7 +125,7 @@ export async function recordUsage(
     ],
   );
 
-  return { id: Number(result.insertId), totalTokens: total };
+  return { id: Number(result[0].id), totalTokens: total };
 }
 
 export function estimateTokens(text = '') {

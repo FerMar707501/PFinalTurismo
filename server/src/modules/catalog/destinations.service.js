@@ -9,7 +9,7 @@ import { serializeDestination } from './catalog.serializers.js';
 
 async function findDestinationRecord(id) {
   const [rows] = await pool.execute(
-    'SELECT * FROM destinations WHERE id = ? LIMIT 1',
+    'SELECT * FROM destinations WHERE id = $1 LIMIT 1',
     [id],
   );
 
@@ -18,11 +18,10 @@ async function findDestinationRecord(id) {
 
 async function ensureUniqueDestination(name, region, excludeId = null) {
   const params = [name, region];
-  let sql =
-    'SELECT id FROM destinations WHERE name = ? AND region = ?';
+  let sql = 'SELECT id FROM destinations WHERE name = $1 AND region = $2';
 
   if (excludeId !== null) {
-    sql += ' AND id <> ?';
+    sql += ' AND id <> $3';
     params.push(excludeId);
   }
 
@@ -52,34 +51,41 @@ export async function listDestinations(filters, { isAdmin = false } = {}) {
   } = filters;
   const conditions = [];
   const params = [];
+  // Marcador posicional siguiente según los parámetros acumulados.
+  const next = () => `$${params.length + 1}`;
 
   if (!isAdmin) {
-    conditions.push('d.active = 1');
+    conditions.push('d.active = TRUE');
   } else if (active !== undefined) {
-    conditions.push('d.active = ?');
-    params.push(active ? 1 : 0);
+    conditions.push(`d.active = ${next()}`);
+    params.push(Boolean(active));
   }
 
   if (search) {
+    const a = next();
+    params.push(`%${search}%`);
+    const b = next();
+    params.push(`%${search}%`);
+    const c = next();
+    params.push(`%${search}%`);
     conditions.push(
-      '(d.name LIKE ? OR d.region LIKE ? OR d.description LIKE ?)',
+      `(d.name ILIKE ${a} OR d.region ILIKE ${b} OR d.description ILIKE ${c})`,
     );
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
   if (region) {
-    conditions.push('d.region = ?');
+    conditions.push(`d.region = ${next()}`);
     params.push(region);
   }
   if (category) {
-    conditions.push('d.category = ?');
+    conditions.push(`d.category = ${next()}`);
     params.push(category);
   }
   if (tag) {
-    conditions.push('FIND_IN_SET(?, d.tags)');
+    conditions.push(`${next()} = ANY(string_to_array(d.tags, ','))`);
     params.push(tag);
   }
   if (priceLevel !== undefined) {
-    conditions.push('d.price_level = ?');
+    conditions.push(`d.price_level = ${next()}`);
     params.push(priceLevel);
   }
 
@@ -95,7 +101,7 @@ export async function listDestinations(filters, { isAdmin = false } = {}) {
     `SELECT
        d.*,
        (SELECT COUNT(*) FROM activities a
-        WHERE a.destination_id = d.id AND a.active = 1) AS activity_count
+        WHERE a.destination_id = d.id AND a.active = TRUE) AS activity_count
      FROM destinations d
      ${where}
      ORDER BY d.name ASC, d.id ASC
@@ -114,9 +120,9 @@ export async function getDestinationById(id, { isAdmin = false } = {}) {
     `SELECT
        d.*,
        (SELECT COUNT(*) FROM activities a
-        WHERE a.destination_id = d.id AND a.active = 1) AS activity_count
+        WHERE a.destination_id = d.id AND a.active = TRUE) AS activity_count
      FROM destinations d
-     WHERE d.id = ?`,
+     WHERE d.id = $1`,
     [id],
   );
 
@@ -126,11 +132,11 @@ export async function getDestinationById(id, { isAdmin = false } = {}) {
     throw AppError.notFound('Destino no encontrado.');
   }
 
-  const activityConditions = ['a.destination_id = ?'];
+  const activityConditions = ['a.destination_id = $1'];
   const activityParams = [id];
 
   if (!isAdmin) {
-    activityConditions.push('a.active = 1');
+    activityConditions.push('a.active = TRUE');
   }
 
   const [activities] = await pool.execute(
@@ -148,11 +154,12 @@ export async function createDestination(data) {
   await ensureUniqueDestination(data.name, data.region);
 
   const destinationId = await withTransaction(async (connection) => {
-    const [result] = await connection.execute(
+    const { rows } = await connection.query(
       `INSERT INTO destinations
          (name, region, description, category, tags, lat, lng,
           price_level, best_season, active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id`,
       [
         data.name,
         data.region,
@@ -163,12 +170,13 @@ export async function createDestination(data) {
         data.lng ?? null,
         data.priceLevel,
         data.bestSeason || null,
-        data.active ? 1 : 0,
+        Boolean(data.active),
       ],
     );
 
-    await syncDestinationDocument(connection, result.insertId);
-    return result.insertId;
+    const newId = Number(rows[0].id);
+    await syncDestinationDocument(connection, newId);
+    return newId;
   });
 
   return getDestinationById(destinationId, { isAdmin: true });
@@ -190,46 +198,47 @@ export async function updateDestination(id, data) {
 
   const updates = [];
   const params = [];
+  const slot = () => `$${params.length + 1}`;
 
   if (data.name !== undefined) {
-    updates.push('name = ?');
+    updates.push(`name = ${slot()}`);
     params.push(data.name);
   }
   if (data.region !== undefined) {
-    updates.push('region = ?');
+    updates.push(`region = ${slot()}`);
     params.push(data.region);
   }
   if (data.description !== undefined) {
-    updates.push('description = ?');
+    updates.push(`description = ${slot()}`);
     params.push(data.description);
   }
   if (data.category !== undefined) {
-    updates.push('category = ?');
+    updates.push(`category = ${slot()}`);
     params.push(data.category);
   }
   if (data.tags !== undefined) {
-    updates.push('tags = ?');
+    updates.push(`tags = ${slot()}`);
     params.push(data.tags || null);
   }
   if (data.lat !== undefined) {
-    updates.push('lat = ?');
+    updates.push(`lat = ${slot()}`);
     params.push(data.lat);
   }
   if (data.lng !== undefined) {
-    updates.push('lng = ?');
+    updates.push(`lng = ${slot()}`);
     params.push(data.lng);
   }
   if (data.priceLevel !== undefined) {
-    updates.push('price_level = ?');
+    updates.push(`price_level = ${slot()}`);
     params.push(data.priceLevel);
   }
   if (data.bestSeason !== undefined) {
-    updates.push('best_season = ?');
+    updates.push(`best_season = ${slot()}`);
     params.push(data.bestSeason || null);
   }
   if (data.active !== undefined) {
-    updates.push('active = ?');
-    params.push(data.active ? 1 : 0);
+    updates.push(`active = ${slot()}`);
+    params.push(Boolean(data.active));
   }
 
   if (updates.length === 0) {
@@ -237,8 +246,8 @@ export async function updateDestination(id, data) {
   }
 
   await withTransaction(async (connection) => {
-    await connection.execute(
-      `UPDATE destinations SET ${updates.join(', ')} WHERE id = ?`,
+    await connection.query(
+      `UPDATE destinations SET ${updates.join(', ')} WHERE id = $${params.length + 1}`,
       [...params, id],
     );
 
@@ -260,8 +269,8 @@ export async function deactivateDestination(id) {
   }
 
   await withTransaction(async (connection) => {
-    await connection.execute(
-      'UPDATE destinations SET active = 0 WHERE id = ?',
+    await connection.query(
+      'UPDATE destinations SET active = FALSE WHERE id = $1',
       [id],
     );
     await deleteDestinationDocuments(connection, id);

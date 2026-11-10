@@ -27,10 +27,10 @@ server.on('error', (error) => {
 async function logDatabaseStatus() {
   try {
     await checkDatabaseConnection();
-    console.log('[DB] MySQL conectado correctamente.');
+    console.log('[DB] PostgreSQL conectado correctamente.');
   } catch (error) {
     console.warn(
-      `[DB] MySQL no disponible (${error.code ?? error.message}). ` +
+      `[DB] PostgreSQL no disponible (${error.code ?? error.message}). ` +
         'La API arrancará, pero /api/health responderá 503.',
     );
   }

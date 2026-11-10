@@ -22,7 +22,7 @@ function parsePayload(value) {
 async function readCacheEntry(key) {
   try {
     const [rows] = await pool.execute(
-      'SELECT payload, expires_at FROM external_cache WHERE cache_key = ? LIMIT 1',
+      'SELECT payload, expires_at FROM external_cache WHERE cache_key = $1 LIMIT 1',
       [key],
     );
 
@@ -55,10 +55,10 @@ async function writeCacheEntry(key, payload, ttlSeconds) {
 
     await pool.execute(
       `INSERT INTO external_cache (cache_key, payload, expires_at)
-       VALUES (?, ?, ?)
-       ON DUPLICATE KEY UPDATE
-         payload = VALUES(payload),
-         expires_at = VALUES(expires_at)`,
+       VALUES ($1, $2, $3)
+       ON CONFLICT (cache_key) DO UPDATE SET
+         payload = EXCLUDED.payload,
+         expires_at = EXCLUDED.expires_at`,
       [key, JSON.stringify(payload), expiresAt],
     );
   } catch {

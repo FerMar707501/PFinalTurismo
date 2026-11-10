@@ -17,7 +17,7 @@ async function insertUsage(userId, tokens, createdAt) {
     `INSERT INTO usage_logs
        (user_id, service_code, model, prompt_tokens, completion_tokens,
         total_tokens, latency_ms, status, created_at)
-     VALUES (?, ?, 'openai/gpt-oss-120b', ?, ?, ?, 1200, 'success', ?)`,
+     VALUES ($1, $2, 'openai/gpt-oss-120b', $3, $4, $5, 1200, 'success', $6)`,
     [userId, serviceCode, Math.floor(tokens / 2), tokens - Math.floor(tokens / 2), tokens, createdAt],
   );
 }
@@ -51,11 +51,11 @@ beforeAll(async () => {
 afterAll(async () => {
   try {
     if (clientId) {
-      await pool.execute('DELETE FROM api_clients WHERE id = ?', [clientId]);
+      await pool.execute('DELETE FROM api_clients WHERE id = $1', [clientId]);
     }
 
     await pool.execute(
-      "DELETE FROM usage_logs WHERE service_code = ? AND model = 'openai/gpt-oss-120b' AND created_at >= ? AND total_tokens IN (100, 200, 300)",
+      "DELETE FROM usage_logs WHERE service_code = $1 AND model = 'openai/gpt-oss-120b' AND created_at >= $2 AND total_tokens IN (100, 200, 300)",
       [serviceCode, `${today} 00:00:00`],
     );
   } finally {

@@ -1,38 +1,39 @@
-/**
- * Ingesta de documentos para el RAG.
- *
- * Genera un documento por destino y uno por actividad a partir del catálogo
- * almacenado en MySQL, con el texto enriquecido que se usará como contexto.
- *
- * Uso:
- *   npm run db:ingest
- */
 import { pool, closePool } from '../src/config/db.js';
 import {
   buildActivityContent,
   buildDestinationContent,
 } from '../src/rag/catalogDocuments.js';
 
+/**
+ * Ingesta de documentos para el RAG (PostgreSQL).
+ *
+ * Genera un documento por destino y uno por actividad a partir del catálogo,
+ * con el texto enriquecido que se usará como contexto. La columna
+ * `search_vector` se actualiza sola mediante un trigger.
+ *
+ * Uso:
+ *   npm run db:ingest
+ */
 async function ingestDocuments() {
-  const [destinations] = await pool.query(
+  const { rows: destinations } = await pool.query(
     `SELECT id, name, region, description, category, tags, lat, lng,
             price_level, best_season
      FROM destinations
-     WHERE active = 1
+     WHERE active = TRUE
      ORDER BY id`,
   );
 
-  const [activities] = await pool.query(
+  const { rows: activities } = await pool.query(
     `SELECT id, destination_id, name, description, category,
             duration_min, price, lat, lng
      FROM activities
-     WHERE active = 1
+     WHERE active = TRUE
      ORDER BY destination_id, id`,
   );
 
   if (destinations.length === 0) {
     throw new Error(
-      'No hay destinos activos. Ejecuta db/seed.sql antes de la ingesta.',
+      'No hay destinos activos. Ejecuta npm run db:setup antes de la ingesta.',
     );
   }
 
@@ -43,14 +44,13 @@ async function ingestDocuments() {
     activitiesByDestination.set(activity.destination_id, list);
   }
 
-  const connection = await pool.getConnection();
+  const client = await pool.connect();
   let destinationDocs = 0;
   let activityDocs = 0;
 
   try {
-    await connection.beginTransaction();
+    await client.query('BEGIN');
 
-    // Se actualizan los documentos existentes y se conservan los manuales.
     for (const destination of destinations) {
       const destinationActivities =
         activitiesByDestination.get(destination.id) ?? [];
@@ -67,14 +67,14 @@ async function ingestDocuments() {
         activityCount: destinationActivities.length,
       };
 
-      await connection.execute(
+      await client.query(
         `INSERT INTO documents
            (source_type, source_id, chunk_index, title, content, metadata)
-         VALUES ('destination', ?, 0, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-           title = VALUES(title),
-           content = VALUES(content),
-           metadata = VALUES(metadata),
+         VALUES ('destination', $1, 0, $2, $3, $4::jsonb)
+         ON CONFLICT (source_type, source_id, chunk_index) DO UPDATE SET
+           title = EXCLUDED.title,
+           content = EXCLUDED.content,
+           metadata = EXCLUDED.metadata,
            updated_at = CURRENT_TIMESTAMP`,
         [
           destination.id,
@@ -97,14 +97,14 @@ async function ingestDocuments() {
           lng: activity.lng,
         };
 
-        await connection.execute(
+        await client.query(
           `INSERT INTO documents
              (source_type, source_id, chunk_index, title, content, metadata)
-           VALUES ('activity', ?, 0, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE
-             title = VALUES(title),
-             content = VALUES(content),
-             metadata = VALUES(metadata),
+           VALUES ('activity', $1, 0, $2, $3, $4::jsonb)
+           ON CONFLICT (source_type, source_id, chunk_index) DO UPDATE SET
+             title = EXCLUDED.title,
+             content = EXCLUDED.content,
+             metadata = EXCLUDED.metadata,
              updated_at = CURRENT_TIMESTAMP`,
           [
             activity.id,
@@ -118,37 +118,24 @@ async function ingestDocuments() {
     }
 
     // Elimina documentos de destinos o actividades que ya no existen o están inactivos.
-    const destinationIds = destinations.map((destination) => destination.id);
-    const activityIds = activities.map((activity) => activity.id);
+    await client.query(
+      `DELETE FROM documents
+       WHERE source_type = 'destination' AND NOT (source_id = ANY($1::bigint[]))`,
+      [destinations.map((destination) => destination.id)],
+    );
 
-    if (destinationIds.length > 0) {
-      await connection.query(
-        "DELETE FROM documents WHERE source_type = 'destination' AND source_id NOT IN (?)",
-        [destinationIds],
-      );
-    } else {
-      await connection.query(
-        "DELETE FROM documents WHERE source_type = 'destination'",
-      );
-    }
+    await client.query(
+      `DELETE FROM documents
+       WHERE source_type = 'activity' AND NOT (source_id = ANY($1::bigint[]))`,
+      [activities.map((activity) => activity.id)],
+    );
 
-    if (activityIds.length > 0) {
-      await connection.query(
-        "DELETE FROM documents WHERE source_type = 'activity' AND source_id NOT IN (?)",
-        [activityIds],
-      );
-    } else {
-      await connection.query(
-        "DELETE FROM documents WHERE source_type = 'activity'",
-      );
-    }
-
-    await connection.commit();
+    await client.query('COMMIT');
   } catch (error) {
-    await connection.rollback();
+    await client.query('ROLLBACK');
     throw error;
   } finally {
-    connection.release();
+    client.release();
   }
 
   return { destinationDocs, activityDocs };
@@ -164,14 +151,14 @@ async function inspectRetrieval() {
   ];
 
   for (const search of sampleQueries) {
-    const [rows] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT id, title,
-              ROUND(MATCH(title, content) AGAINST (? IN NATURAL LANGUAGE MODE), 3) AS score
-       FROM documents
-       WHERE MATCH(title, content) AGAINST (? IN NATURAL LANGUAGE MODE)
+              ROUND(ts_rank_cd(search_vector, q)::numeric, 3) AS score
+       FROM documents, websearch_to_tsquery('spanish', $1) AS q
+       WHERE search_vector @@ q
        ORDER BY score DESC
        LIMIT 3`,
-      [search, search],
+      [search],
     );
 
     console.log(`\nConsulta: "${search}"`);
@@ -186,11 +173,13 @@ async function inspectRetrieval() {
 }
 
 async function main() {
-  console.log('Conectando a MySQL...');
-  const [dbInfo] = await pool.query(
-    'SELECT DATABASE() AS db, VERSION() AS version',
+  console.log('Conectando a PostgreSQL…');
+  const { rows: dbInfo } = await pool.query(
+    'SELECT current_database() AS db, version() AS version',
   );
-  console.log(`Base de datos: ${dbInfo[0].db} (MySQL ${dbInfo[0].version})`);
+  console.log(
+    `Base de datos: ${dbInfo[0].db} (${String(dbInfo[0].version).split(' ')[0]})`,
+  );
 
   const startedAt = Date.now();
   const result = await ingestDocuments();
@@ -201,8 +190,8 @@ async function main() {
       `${result.destinationDocs} destinos y ${result.activityDocs} actividades.`,
   );
 
-  const [counts] = await pool.query(
-    `SELECT source_type, COUNT(*) AS total
+  const { rows: counts } = await pool.query(
+    `SELECT source_type, COUNT(*)::int AS total
      FROM documents
      GROUP BY source_type
      ORDER BY source_type`,
