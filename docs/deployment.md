@@ -2,7 +2,7 @@
 
 El flujo de GitHub Actions (`.github/workflows/ci.yml`) ejecuta:
 
-1. **Backend**: MySQL 8.4 como servicio, esquema + seed + ingesta RAG, las 68 pruebas
+1. **Backend**: MySQL 8.4 como servicio, esquema + seed + ingesta RAG, las 74 pruebas
    con Vitest/Supertest y el arranque real en `NODE_ENV=production`.
 2. **Frontend**: `npm ci`, `npm run lint`, `npm run build` y publicación del artefacto.
 3. **Despliegue** (solo en `main` y tras aprobar pruebas): API en **Render** y frontend

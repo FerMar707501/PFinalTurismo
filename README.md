@@ -172,7 +172,7 @@ Características implementadas:
 - `X-Request-Id` en todas las respuestas y en los logs de error.
 - Manejo centralizado de errores (404, JSON inválido, errores de MySQL, validación Zod).
 - Arranque y cierre ordenado del servidor y del pool de MySQL.
-- 68 pruebas de integración con Vitest y Supertest (Groq y APIs externas simulados).
+- 74 pruebas con Vitest y Supertest: integración de la API y contrato del cliente de Groq.
 
 ### Autenticación rápida
 
@@ -208,6 +208,12 @@ Para continuar una conversación, envía también `conversationId`. El historial
 consulta en `GET /api/chat/conversations` y
 `GET /api/chat/conversations/{id}`. La respuesta real de Groq requiere configurar
 `GROQ_API_KEY` en `server/.env`.
+
+> **Límite del plan gratuito de Groq:** 8.000 tokens por minuto con
+> `gpt-oss-120b`. Un agente multi-paso consume entre 6.000 y 14.000 tokens, así
+> que conviene espaciar las ejecuciones durante la demostración. Si aparece un
+> `429`, espera un minuto o cambia `GROQ_MODEL` a `openai/gpt-oss-20b`.
+> El cliente reintenta automáticamente ante errores de tasa.
 
 Ejemplo de agente de itinerario:
 

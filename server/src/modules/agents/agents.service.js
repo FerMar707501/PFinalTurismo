@@ -329,10 +329,12 @@ export async function runItineraryAgent(user, input) {
   const service = await getAgentService(ITINERARY_SERVICE);
   const [destination] = await getActiveDestinations([input.destinationId]);
   const userPrompt = [
-    `Planifica un itinerario de ${input.days} días (${Math.max(0, input.days - 1)} noches) en ${destination.name}, Colombia.`,
+    `Planifica un itinerario de ${input.days} días (${Math.max(0, input.days - 1)} noches) en ${destination.name}, Colombia (ID de destino: ${destination.id}).`,
     `Datos del viaje: origen ${input.originCity}; ${input.travelers} viajero(s); presupuesto ${formatBudget(input.budget)}; intereses: ${formatInterests(input.interests)}.`,
     input.notes ? `Notas adicionales: ${input.notes}` : null,
-    'Consulta la ficha del destino, sus actividades, el clima y la distancia desde la ciudad de origen antes de responder.',
+    `Usa siempre destinationId = ${destination.id} en las herramientas; no consultes otros destinos.`,
+    'Consulta una sola vez la ficha del destino, sus actividades, el clima y la distancia desde la ciudad de origen.',
+    'Cuando tengas esos datos, responde con el itinerario final; no repitas consultas ya realizadas.',
     'Presenta el itinerario día por día con actividades, duración, costo estimado por persona, recomendaciones de clima y fuentes consultadas.',
     'Si algún dato externo no está disponible, indícalo y usa supuestos razonables sin inventar precios ni horarios.',
   ]
@@ -360,6 +362,9 @@ export async function runCompareAgent(user, input) {
     `Compara estos destinos de Colombia: ${destinationList}.`,
     `Datos del viaje: origen ${input.originCity}; ${input.travelers} viajero(s); duración estimada ${input.days} días; presupuesto ${formatBudget(input.budget)}; intereses: ${formatInterests(input.interests)}.`,
     'Consulta la ficha y las actividades de cada destino, el clima y la distancia desde la ciudad de origen.',
+    'Usa únicamente los destinos indicados (sus IDs aparecen entre paréntesis); no consultes otros.',
+    'Puedes pedir la ficha, las actividades y el clima de los dos destinos en la misma respuesta.',
+    'Realiza cada consulta una sola vez y luego presenta el análisis final sin llamar más herramientas.',
     'Presenta una tabla comparativa con costo estimado, clima, oferta de actividades y una recomendación final justificada.',
     'Si falta información de algún destino, dilo explícitamente y no inventes datos.',
   ].join('\n');

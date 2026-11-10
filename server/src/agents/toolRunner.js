@@ -1,7 +1,37 @@
 import { generateChatCompletion } from '../ai/groqClient.js';
 import { AppError } from '../errors/AppError.js';
 
-export const AGENT_MAX_STEPS = 6;
+export const AGENT_MAX_STEPS = 8;
+const RATE_LIMIT_MAX_RETRIES = 2;
+const RATE_LIMIT_DEFAULT_WAIT_MS = 6000;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function completeWithRetry(options) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= RATE_LIMIT_MAX_RETRIES; attempt += 1) {
+    try {
+      return await generateChatCompletion(options);
+    } catch (error) {
+      lastError = error;
+
+      if (error?.code !== 'AI_RATE_LIMITED' || attempt === RATE_LIMIT_MAX_RETRIES) {
+        throw error;
+      }
+
+      const waitMs = Math.max(
+        RATE_LIMIT_DEFAULT_WAIT_MS,
+        (Number(error.retryAfterSeconds) || 0) * 1000,
+      );
+      await sleep(waitMs);
+    }
+  }
+
+  throw lastError;
+}
 
 function parseArguments(rawArguments) {
   try {
@@ -41,12 +71,7 @@ function dedupeSources(sources) {
   const seen = new Set();
 
   return sources.filter((source) => {
-    const key = [
-      source.sourceType,
-      source.sourceId,
-      source.title,
-      source.url,
-    ].join('|');
+    const key = [source.sourceType, source.sourceId, source.title, source.url].join('|');
 
     if (seen.has(key)) {
       return false;
@@ -55,6 +80,54 @@ function dedupeSources(sources) {
     seen.add(key);
     return true;
   });
+}
+
+/**
+ * Resumen de respaldo cuando el agente agota los pasos sin redactar el texto
+ * final (por ejemplo, porque gpt-oss insiste en seguir llamando herramientas).
+ * Usa los resultados reales de las herramientas ya ejecutadas para no perder
+ * el trabajo de los pasos anteriores.
+ */
+function buildFallbackAnswer(steps) {
+  const lines = ['Resumen elaborado con la información consultada:'];
+
+  for (const step of steps) {
+    for (const result of step.results ?? []) {
+      if (!result.ok) {
+        continue;
+      }
+
+      const payload = result.result;
+      const label = String(result.tool).replaceAll('_', ' ');
+
+      if (payload && typeof payload === 'object') {
+        const name = payload.name ?? payload.destination?.name;
+        const summary = payload.summary ?? payload.description;
+        const items = payload.activities ?? payload.items;
+
+        if (Array.isArray(items) && items.length > 0) {
+          lines.push(`- ${label}: ${items.length} elemento(s) disponibles.`);
+          for (const item of items.slice(0, 8)) {
+            const title = item.name ?? item.title ?? item.day;
+            const price = item.price != null ? ` · $${item.price} COP` : '';
+            if (title) {
+              lines.push(`  · ${title}${price}`);
+            }
+          }
+          continue;
+        }
+
+        if (name) {
+          lines.push(`- ${label}: ${name}${summary ? ` — ${String(summary).slice(0, 160)}` : ''}`);
+          continue;
+        }
+      }
+
+      lines.push(`- ${label}: consultado correctamente.`);
+    }
+  }
+
+  return lines.length > 1 ? lines.join('\n') : '';
 }
 
 export async function runToolAgent({
@@ -84,13 +157,15 @@ export async function runToolAgent({
   try {
     for (let step = 0; step < maxSteps; step += 1) {
       const isLastStep = step === maxSteps - 1;
-      const completion = await generateChatCompletion({
+      // En el último paso se quitan las herramientas (en lugar de usar
+      // tool_choice: 'none') porque gpt-oss sigue invocándolas y Groq
+      // devuelve 400 "Tool choice is none, but model called a tool".
+      const completion = await completeWithRetry({
         model,
         messages,
         temperature,
         maxTokens,
-        tools,
-        toolChoice: isLastStep ? 'none' : 'auto',
+        tools: isLastStep ? null : tools,
       });
 
       usage.promptTokens += completion.usage?.promptTokens ?? 0;
@@ -120,6 +195,7 @@ export async function runToolAgent({
 
       if (isLastStep) {
         stepRecord.type = 'limit';
+        answer = (completion.content ?? '').trim();
         break;
       }
 
@@ -178,6 +254,10 @@ export async function runToolAgent({
           content: JSON.stringify(execution.data),
         });
       }
+    }
+
+    if (!answer) {
+      answer = buildFallbackAnswer(steps);
     }
 
     if (!answer) {

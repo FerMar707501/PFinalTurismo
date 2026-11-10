@@ -323,9 +323,11 @@ describe('Fase 5 — agentes multi-paso', () => {
     itineraryRunId = response.body.run.id;
     itineraryConversationId = response.body.conversationId;
 
-    expect(mockGenerate.mock.calls[0][0].toolChoice).toBe('auto');
-    expect(mockGenerate.mock.calls[1][0].toolChoice).toBe('auto');
+    // Los pasos intermedios reciben las herramientas; el último paso no,
+    // porque gpt-oss ignora tool_choice: 'none' y Groq responde 400.
     expect(mockGenerate.mock.calls[0][0].tools).toHaveLength(5);
+    expect(mockGenerate.mock.calls[1][0].tools).toHaveLength(5);
+    expect(mockGenerate.mock.calls[0][0].toolChoice).toBeUndefined();
     expect(mockWeather).toHaveBeenCalledWith(
       expect.objectContaining({ locationName: 'Salento', days: 3 }),
     );
@@ -570,6 +572,28 @@ describe('Fase 5 — agentes multi-paso', () => {
       [agentUserId],
     );
     expect(usageRows[0].error_code).toBe('AI_UPSTREAM_ERROR');
+  });
+
+  it('genera un resumen de respaldo cuando se agotan los pasos', async () => {
+    // El modelo siempre pide otra herramienta: se alcanza AGENT_MAX_STEPS.
+    for (let step = 0; step < 8; step += 1) {
+      mockGenerate.mockResolvedValueOnce(
+        completion({
+          toolCalls: [
+            toolCall('get_destination_info', { destinationId: 6 }, `call_${step}`),
+          ],
+        }),
+      );
+    }
+
+    const response = await request(app)
+      .post('/api/agents/itinerary')
+      .set('Authorization', `Bearer ${agentToken}`)
+      .send({ destinationId: 6, days: 2 });
+
+    expect(response.status).toBe(201);
+    expect(response.body.answer).toContain('Resumen elaborado');
+    expect(response.body.steps.length).toBe(8);
   });
 
   it('continúa si una herramienta externa falla', async () => {

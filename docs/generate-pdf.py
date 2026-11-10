@@ -310,11 +310,11 @@ def build() -> None:
         bullets(
             [
                 "<b>Chat RAG:</b> recuperación <i>FULLTEXT</i> sobre 60 documentos, memoria de la conversación y fuentes citadas.",
-                "<b>Agentes multi-paso:</b> tool calling con Groq, hasta seis pasos y herramientas internas y externas.",
+                "<b>Agentes multi-paso:</b> tool calling con Groq, hasta ocho pasos y herramientas internas y externas.",
                 "<b>Control de cuota:</b> estimación previa, bloqueo con HTTP 429 y registro del consumo real posterior.",
                 "<b>Administración:</b> usuarios y cuotas, destinos, actividades, servicios de IA y claves de API.",
                 "<b>Analítica:</b> un mismo agregado para la web y Power BI, con exportación CSV.",
-                "<b>Calidad:</b> 68 pruebas de integración, Swagger, colección Postman y CI/CD en GitHub Actions.",
+                "<b>Calidad:</b> 74 pruebas, Swagger, colección Postman y CI/CD en GitHub Actions.",
             ]
         )
     )
@@ -368,7 +368,7 @@ Power BI ──X-API-Key───┘  (mismo agregado de /api/analytics/usage)
                 ["Conversaciones e historial", "Conversaciones por usuario, mensajes, fuentes y ejecuciones de agentes", "Capturas 04 y 07"],
                 ["API REST con permisos", "26 rutas documentadas, JWT, API keys y CORS", "Swagger y Postman"],
                 ["Power BI conectado", "Endpoint externo con X-API-Key y mismo agregado", "powerbi/README y captura 18"],
-                ["Pruebas automatizadas", "68 pruebas de integración con Vitest y Supertest", "CI en verde"],
+                ["Pruebas automatizadas", "74 pruebas con Vitest y Supertest", "CI en verde"],
                 ["Despliegue y CI/CD", "Render, Vercel y GitHub Actions con smoke test", "Workflows ci.yml, smoke.yml y CodeQL"],
             ],
             widths=[3.6 * cm, 8.4 * cm, 5 * cm],
@@ -573,12 +573,13 @@ X-API-Key: rutaia_********************************
         data_table(
             [
                 ["Archivo", "Enfoque", "Pruebas"],
-                ["api.test.js", "Salud, errores, 404, rate limit y seguridad básica", "20"],
-                ["fase3.test.js", "Login, roles, usuarios y catálogo administrable", "28"],
-                ["fase4.test.js", "Chat RAG, memoria, fuentes y cuota", "8"],
-                ["fase5.test.js", "Agentes, herramientas, trazas y cuotas", "9"],
+                ["api.test.js", "Salud, errores, 404, rate limit y seguridad básica", "8"],
+                ["fase3.test.js", "Login, roles, usuarios y catálogo administrable", "31"],
+                ["fase4.test.js", "Chat RAG, memoria, fuentes y cuota", "10"],
+                ["fase5.test.js", "Agentes, herramientas, trazas y cuotas", "10"],
                 ["fase7.test.js", "Analítica, CSV, API keys y endpoint externo", "10"],
-                ["Total", "Vitest + Supertest sobre MySQL 8", "68"],
+                ["groqClient.test.js", "Contrato del cliente de Groq y recuperación de tool calls", "6"],
+                ["Total", "Vitest + Supertest sobre MySQL 8", "74"],
             ],
             widths=[3.4 * cm, 10.4 * cm, 2.8 * cm],
         )
@@ -586,7 +587,7 @@ X-API-Key: rutaia_********************************
     story.append(Spacer(1, 6))
     story.append(
         p(
-            "La CI de GitHub Actions reejecuta las 68 pruebas desde cero contra MySQL 8.4, "
+            "La CI de GitHub Actions reejecuta las 74 pruebas desde cero contra MySQL 8.4, "
             "aplica esquema y seed, ejecuta la ingesta del RAG y arranca la API en modo "
             "producción. El workflow <b>smoke.yml</b> verifica la URL publicada y "
             "<b>codeql.yml</b> analiza la seguridad del código."
@@ -596,7 +597,7 @@ X-API-Key: rutaia_********************************
     story.append(
         code_block(
             """
-cd server && npm test              # 68 pruebas de integración
+cd server && npm test              # 74 pruebas
 cd client && npm run build         # build de producción
 cd client && npm run lint          # oxlint (0 errores)
 node scripts/smoke-api.mjs <url>   # health, login, catálogo y analítica
@@ -608,7 +609,7 @@ node scripts/qa-frontend.mjs       # capturas y detección de desbordes
     story.append(
         bullets(
             [
-                "Backend: 5 archivos y 68 pruebas en verde (~8 s).",
+                "Backend: 6 archivos y 74 pruebas en verde (~8 s).",
                 "Frontend: build de ~368 kB (102 kB gzip) y lint sin errores.",
                 "Docker: imagen multipropósito con usuario sin privilegios y health check.",
                 "CI: jobs de backend, frontend y despliegue en verde; el despliegue se omite con un aviso si no hay secretos.",
