@@ -8,8 +8,8 @@ afterAll(async () => {
 });
 
 describe('API base', () => {
-  it('GET / devuelve la información del servicio', async () => {
-    const response = await request(app).get('/');
+  it('GET /api/ devuelve la información del servicio', async () => {
+    const response = await request(app).get('/api/');
 
     expect(response.status).toBe(200);
     expect(response.body.service).toBe('RutaIA API');
