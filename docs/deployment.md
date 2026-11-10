@@ -6,7 +6,7 @@
 |---|---|
 | App + API | https://rutaia-api-q3y2.onrender.com |
 | Swagger | https://rutaia-api-q3y2.onrender.com/api-docs |
-| Power BI | `GET /api/bi/usage` con `X-API-Key: demo-bi-key-123` |
+| Power BI | `GET /api/bi/usage` con `X-API-Key: rutaia_ce9e9b1489b894c17550d818ee956a4dcdbc0529d2c59cc7` |
 | PostgreSQL | `rutaia-db` (Render, plan gratuito, Oregon) |
 
 La app y la API viven en **un único servicio web**: Express sirve `client/dist`

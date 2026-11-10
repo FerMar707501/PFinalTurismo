@@ -17,7 +17,7 @@ lateral colapsable.
 | **Aplicación web** | https://rutaia-api-q3y2.onrender.com |
 | **Swagger / API docs** | https://rutaia-api-q3y2.onrender.com/api-docs |
 | **API (JSON OpenAPI)** | https://rutaia-api-q3y2.onrender.com/api/docs.json |
-| **Power BI** | `GET https://rutaia-api-q3y2.onrender.com/api/bi/usage` con cabecera `X-API-Key: demo-bi-key-123` |
+| **Power BI** | `GET https://rutaia-api-q3y2.onrender.com/api/bi/usage` con cabecera `X-API-Key: rutaia_ce9e9b1489b894c17550d818ee956a4dcdbc0529d2c59cc7` |
 | **Health check** | https://rutaia-api-q3y2.onrender.com/api/health |
 
 - Usuarios demo: `admin@rutaia.local` / `Admin123!` y `demo@rutaia.local` / `Demo123!`.

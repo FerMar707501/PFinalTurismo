@@ -6,13 +6,13 @@ El reporte de Power BI consume el mismo agregado que el panel web de analítica.
 
 ```text
 URL:      https://rutaia-api-q3y2.onrender.com/api/bi/usage?from=2026-01-01&to=2026-12-31
-Cabecera: X-API-Key: demo-bi-key-123
+Cabecera: X-API-Key: rutaia_ce9e9b1489b894c17550d818ee956a4dcdbc0529d2c59cc7
 ```
 
 `/api/bi/usage` es un alias de `/api/external/analytics/usage`; ambos devuelven la
 misma estructura `{ meta, totals, byService, byUser, daily, monthly }`.
 
-La clave `demo-bi-key-123` ya está registrada en la base (solo se guarda su
+La clave `rutaia_ce9e9b1489b894c17550d818ee956a4dcdbc0529d2c59cc7` ya está registrada en la base (solo se guarda su
 SHA-256). Para crear otra, un administrador puede usar **Analítica y Power BI →
 Conectar Power BI** o la API.
 
@@ -33,7 +33,7 @@ Conectar Power BI** o la API.
 
    | Nombre | Valor |
    |---|---|
-   | `X-API-Key` | `demo-bi-key-123` |
+   | `X-API-Key` | `rutaia_ce9e9b1489b894c17550d818ee956a4dcdbc0529d2c59cc7` |
 
 4. **Aceptar**.
 
@@ -83,7 +83,7 @@ Reemplaza `in totales` por `in servicios`, `in usuarios`, `in diario` o
 ```m
 let
     url = "https://rutaia-api-q3y2.onrender.com/api/bi/usage?from=2026-01-01&to=2026-12-31",
-    respuesta = Web.Contents(url, [Headers = [#"X-API-Key" = "demo-bi-key-123"]]),
+    respuesta = Web.Contents(url, [Headers = [#"X-API-Key" = "rutaia_ce9e9b1489b894c17550d818ee956a4dcdbc0529d2c59cc7"]]),
     json = Json.Document(respuesta),
 
     totales = #table(
