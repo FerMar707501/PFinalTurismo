@@ -43,7 +43,7 @@ avanzado**, pega esta consulta y sustituye `rutaia_...` por la clave real
 
 ```m
 let
-    url = "http://localhost:4000/api/external/analytics/usage?from=2026-01-01&to=2026-12-31",
+    url = "https://rutaia-api-q3y2.onrender.com/api/bi/usage?from=2026-01-01&to=2026-12-31",
     respuesta = Web.Contents(url, [Headers = [#"X-API-Key" = "rutaia_..."]]),
     json = Json.Document(respuesta),
 
@@ -71,7 +71,7 @@ El modelo TMDL equivalente está en `powerbi/modelo/` (tablas `Totales`,
 
 1. **Obtener datos → Web**.
 2. URL avanzada (ejemplo):
-   `http://localhost:4000/api/external/analytics/usage?from=2026-01-01&to=2026-12-31`
+   `https://rutaia-api-q3y2.onrender.com/api/bi/usage?from=2026-01-01&to=2026-12-31`
 3. En **Encabezados HTTP**, agrega `X-API-Key` con la clave.
 4. Al cargar, Power BI recibe un único registro con:
 
