@@ -17,21 +17,20 @@ env:
 
 jobs:
   backend:
-    name: Backend · pruebas y migración
+    name: Backend · pruebas y esquema
     runs-on: ubuntu-latest
 
     services:
-      mysql:
-        image: mysql:8.4
+      postgres:
+        image: postgres:16
         env:
-          MYSQL_ROOT_PASSWORD: root_ci
-          MYSQL_DATABASE: rutaia
-          MYSQL_USER: rutaia
-          MYSQL_PASSWORD: rutaia_ci
+          POSTGRES_DB: rutaia
+          POSTGRES_USER: rutaia
+          POSTGRES_PASSWORD: rutaia_ci
         ports:
-          - 3306:3306
+          - 5432:5432
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot_ci --silent"
+          --health-cmd="pg_isready -U rutaia -d rutaia"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=30
@@ -58,11 +57,12 @@ jobs:
           NODE_ENV=test
           PORT=4000
           DB_HOST=127.0.0.1
-          DB_PORT=3306
+          DB_PORT=5432
           DB_USER=rutaia
           DB_PASSWORD=rutaia_ci
           DB_NAME=rutaia
           DB_CONNECTION_LIMIT=10
+          DATABASE_SSL=false
           JWT_SECRET=secreto_de_ci_con_mas_de_32_caracteres
           JWT_EXPIRES_IN=1h
           GROQ_API_KEY=
@@ -75,11 +75,7 @@ jobs:
           EOF
 
       - name: Aplicar esquema y datos de demostración
-        env:
-          MYSQL_PWD: rutaia_ci
-        run: |
-          mysql -h 127.0.0.1 -P 3306 -u rutaia rutaia < ../db/schema.sql
-          mysql -h 127.0.0.1 -P 3306 -u rutaia rutaia < ../db/seed.sql
+        run: npm run db:setup -- --force
 
       - name: Ingesta del RAG
         run: npm run db:ingest
@@ -127,8 +123,6 @@ jobs:
 
       - name: Build de producción
         run: npm run build
-        env:
-          VITE_API_URL: http://localhost:4000/api
 
       - name: Guardar artefacto
         uses: actions/upload-artifact@v4
@@ -138,7 +132,7 @@ jobs:
           retention-days: 7
 
   deploy:
-    name: Despliegue
+    name: Despliegue en Render
     needs: [backend, frontend]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -155,17 +149,13 @@ jobs:
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           backend=false
-          frontend=false
           if [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID" ]; then backend=true; fi
-          if [ -n "$VERCEL_TOKEN" ]; then frontend=true; fi
           echo "backend=$backend" >> "$GITHUB_OUTPUT"
-          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
-          echo "Backend: $backend · Frontend: $frontend"
+          echo "Backend: $backend"
 
-      - name: Desplegar API en Render
+      - name: Desplegar en Render
         if: steps.targets.outputs.backend == 'true'
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
@@ -178,7 +168,7 @@ jobs:
             -d "{\"clearCache\":\"do_not_clear\"}" > /dev/null
           echo "Despliegue solicitado a Render."
 
-      - name: Esperar a que Render publique la API
+      - name: Esperar a que Render publique la app
         if: steps.targets.outputs.backend == 'true'
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
@@ -200,20 +190,7 @@ jobs:
           echo "El despliegue no alcanzó el estado live."
           exit 1
 
-      - name: Publicar frontend en Vercel
-        if: steps.targets.outputs.frontend == 'true'
-        working-directory: client
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
-          npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
-          npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"
-
       - name: Resumen
         run: |
           echo "### Despliegue RutaIA" >> "$GITHUB_STEP_SUMMARY"
-          echo "Backend configurado: ${{ steps.targets.outputs.backend }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Frontend configurado: ${{ steps.targets.outputs.frontend }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Render configurado: ${{ steps.targets.outputs.backend }}" >> "$GITHUB_STEP_SUMMARY"
