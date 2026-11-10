@@ -1,21 +1,15 @@
 import { useState } from 'react';
 import Icon from '../components/Icon.jsx';
+import BrandMark from '../components/BrandMark.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { API_URL } from '../api/client.js';
-import { COUNTRY, FACTS } from '../utils/country.js';
+import { COUNTRY } from '../utils/country.js';
 
 function docsUrl() {
   const base = API_URL.replace(/\/api\/?$/, '');
   return `${base}/api/docs`;
 }
-
-const REGIONS_SHOWCASE = [
-  { icon: 'temple', label: 'Tikal', note: 'Petén' },
-  { icon: 'waves', label: 'Atitlán', note: 'Sololá' },
-  { icon: 'mountain', label: 'Pacaya', note: 'Escuintla' },
-  { icon: 'coffee', label: 'Antigua', note: 'Sacatepéquez' },
-];
 
 const DEMO_ACCOUNTS = [
   {
@@ -42,7 +36,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [factIndex, setFactIndex] = useState(0);
 
   const update = (field) => (event) => {
     setForm((current) => ({ ...current, [field]: event.target.value }));
@@ -71,77 +64,30 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="login-page">
-      <section className="login-stage">
-        <header className="login-stage-top">
-          <div className="login-brand">
-            <span className="brand-mark large">R</span>
-            <div>
-              <strong>RutaIA</strong>
-              <small>Turismo inteligente · {COUNTRY.name}</small>
-            </div>
+    <main className="login-page login-page-centered">
+      <div className="login-sky" aria-hidden="true">
+        <span className="sunset-glow" />
+        <span className="sunset-ridge ridge-back" />
+        <span className="sunset-ridge ridge-mid" />
+        <span className="sunset-ridge ridge-front" />
+      </div>
+
+      <div className="login-theme-slot">
+        <ThemeToggle compact />
+      </div>
+
+      <div className="login-center">
+        <header className="login-hero">
+          <BrandMark size="xl" className="login-hero-logo" />
+          <div className="login-hero-copy">
+            <h1 className="login-wordmark">RutaIA</h1>
+            <p className="login-tagline">
+              Turismo inteligente · {COUNTRY.name}
+            </p>
           </div>
-          <ThemeToggle compact />
         </header>
 
-        <div className="login-stage-copy">
-          <span className="login-pill">
-            <Icon name="sparkles" size={14} />
-            Proyecto final · Programación Comercial
-          </span>
-          <h1>
-            Recorre Guatemala con una IA que conoce cada departamento.
-          </h1>
-          <p className="login-lead">
-            Del lago de Atitlán a Tikal, del altiplano volcánico a la costa del
-            Pacífico: un asistente con RAG y dos agentes multi-paso que consultan
-            catálogo, clima y rutas reales.
-          </p>
-
-          <ul className="login-highlights">
-            {REGIONS_SHOWCASE.map((item) => (
-              <li key={item.label}>
-                <span className="login-highlight-icon">
-                  <Icon name={item.icon} size={18} />
-                </span>
-                <span>
-                  <strong>{item.label}</strong>
-                  <small>{item.note}</small>
-                </span>
-              </li>
-            ))}
-          </ul>
-
-          <button
-            type="button"
-            className="login-fact"
-            onClick={() => setFactIndex((index) => (index + 1) % FACTS.length)}
-            title="Ver otro dato"
-          >
-            <Icon name="info" size={16} />
-            <span>{FACTS[factIndex]}</span>
-            <Icon name="refresh" size={14} />
-          </button>
-        </div>
-
-        <footer className="login-stage-foot">
-          <span>
-            <Icon name="globe" size={14} /> Open-Meteo · OSRM · Wikipedia
-          </span>
-          <span>
-            <Icon name="bot" size={14} /> Groq tool calling
-          </span>
-        </footer>
-
-        <div className="login-contours" aria-hidden="true">
-          <span className="contour c1" />
-          <span className="contour c2" />
-          <span className="contour c3" />
-        </div>
-      </section>
-
-      <section className="login-panel">
-        <div className="login-card">
+        <section className="login-card">
           <div className="login-card-head">
             <span className="login-card-icon">
               <Icon name="key" size={20} />
@@ -245,8 +191,8 @@ export default function LoginPage() {
               Ver API
             </a>
           </p>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }

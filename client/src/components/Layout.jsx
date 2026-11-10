@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
+import BrandMark from './BrandMark.jsx';
 import QuotaBar from './QuotaBar.jsx';
 import ThemeToggle from './ThemeToggle.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -120,7 +121,7 @@ export default function Layout({
       >
         <div className="sidebar-top">
           <div className="brand" onClick={() => go('dashboard')} role="presentation">
-            <span className="brand-mark">R</span>
+            <BrandMark size="sm" />
             <span className="brand-copy">
               <strong>RutaIA</strong>
               <small>{COUNTRY.name}</small>

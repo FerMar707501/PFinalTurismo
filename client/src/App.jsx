@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Layout from './components/Layout.jsx';
+import BrandMark from './components/BrandMark.jsx';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
@@ -45,7 +46,7 @@ function readSidebarPreference() {
 function SplashScreen() {
   return (
     <div className="splash-screen">
-      <span className="brand-mark large">R</span>
+      <BrandMark size="lg" />
       <strong>RutaIA</strong>
       <span className="spinner" />
       <p>Preparando tu sesión…</p>
