@@ -159,6 +159,56 @@ export const api = {
   usage: {
     me: (token) => apiRequest('/usage/me', { token }),
   },
+  analytics: {
+    usage: (params, token) =>
+      apiRequest(`/analytics/usage${buildQuery(params)}`, { token }),
+    clients: (token) => apiRequest('/analytics/clients', { token }),
+    createClient: (body, token) =>
+      apiRequest('/analytics/clients', { method: 'POST', body, token }),
+    setClientStatus: (id, active, token) =>
+      apiRequest(`/analytics/clients/${id}/status`, {
+        method: 'PATCH',
+        body: { active },
+        token,
+      }),
+    downloadCsv: (params, token) => {
+      const url = `${API_URL}/analytics/usage.csv${buildQuery(params)}`;
+      // La descarga usa fetch para poder enviar el JWT y respetar CORS.
+      fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            const data = await response.json().catch(() => null);
+            throw new ApiError(
+              data?.error?.message ?? 'No se pudo descargar el CSV.',
+              response.status,
+              data?.error?.code,
+            );
+          }
+
+          const disposition = response.headers.get('content-disposition') ?? '';
+          const match = /filename="?([^";]+)"?/i.exec(disposition);
+          const filename = match?.[1] ?? 'rutaia-consumo.csv';
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = objectUrl;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(objectUrl);
+        })
+        .catch((error) => {
+          window.dispatchEvent(
+            new CustomEvent('rutaia:toast', {
+              detail: { message: error.message, type: 'error' },
+            }),
+          );
+        });
+    },
+  },
   chat: {
     send: (body, token, signal) =>
       apiRequest('/chat', { method: 'POST', body, token, signal }),

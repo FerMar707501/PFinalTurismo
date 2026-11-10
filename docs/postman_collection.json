@@ -1,0 +1,617 @@
+{
+  "info": {
+    "_postman_id": "b7f5c8a0-1d2e-4f3a-9c1b-7e6d5a4f3b2c",
+    "name": "RutaIA · API",
+    "description": "Colección de demostración de la API de RutaIA: autenticación, catálogo, chat RAG, agentes multi-paso, cuotas, analítica y API externa para Power BI.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000/api"
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "userToken",
+      "value": ""
+    },
+    {
+      "key": "conversationId",
+      "value": ""
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "destinationId",
+      "value": "1"
+    },
+    {
+      "key": "apiKey",
+      "value": ""
+    },
+    {
+      "key": "analyticsFrom",
+      "value": "2026-01-01"
+    },
+    {
+      "key": "analyticsTo",
+      "value": "2026-12-31"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 · Sistema y documentación",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        },
+        {
+          "name": "OpenAPI JSON",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/docs.json"
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 · Autenticación",
+      "item": [
+        {
+          "name": "Login administrador",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('adminToken', body.token);",
+                  "pm.test('Entrega JWT y rol admin', () => {",
+                  "  pm.expect(body.tokenType).to.eql('Bearer');",
+                  "  pm.expect(body.user.role).to.eql('admin');",
+                  "  pm.expect(body.quota.limitTokens).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@rutaia.local\",\n  \"password\": \"Admin123!\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Login usuario demo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('userToken', pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@rutaia.local\",\n  \"password\": \"Demo123!\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Perfil autenticado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/me"
+          }
+        },
+        {
+          "name": "Login con credenciales inválidas (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@rutaia.local\",\n  \"password\": \"ClaveIncorrecta123!\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 · Usuarios y roles",
+      "item": [
+        {
+          "name": "Listar usuarios",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear usuario de prueba",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Usuario Postman\",\n  \"email\": \"postman.demo@rutaia.local\",\n  \"password\": \"Postman123!\",\n  \"role\": \"user\",\n  \"tokenLimitMonth\": 80000,\n  \"active\": true\n}"
+            },
+            "url": "{{baseUrl}}/users"
+          }
+        },
+        {
+          "name": "Actualizar cuota de usuario",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tokenLimitMonth\": 120000\n}"
+            },
+            "url": "{{baseUrl}}/users/2"
+          }
+        },
+        {
+          "name": "Usuario sin permisos de admin (403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/users"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 · Catálogo",
+      "item": [
+        {
+          "name": "Listar destinos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Devuelve paginación', () => pm.expect(body.pagination.total).to.be.above(0));",
+                  "if (body.data[0]) pm.collectionVariables.set('destinationId', body.data[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/destinations?page=1&limit=5&active=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["destinations"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "5" },
+                { "key": "active", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detalle de destino con actividades",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/destinations/{{destinationId}}"
+          }
+        },
+        {
+          "name": "Listar actividades de un destino",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/activities?destinationId={{destinationId}}&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities"],
+              "query": [
+                { "key": "destinationId", "value": "{{destinationId}}" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear destino (admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Destino Postman\",\n  \"region\": \"Región Demo\",\n  \"description\": \"Destino creado desde la colección de Postman para demostrar el CRUD administrativo y la sincronización del RAG.\",\n  \"category\": \"Demostración\",\n  \"tags\": \"postman, demo\",\n  \"priceLevel\": 2,\n  \"bestSeason\": \"Todo el año\",\n  \"active\": true\n}"
+            },
+            "url": "{{baseUrl}}/destinations"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 · Chat RAG y cuota",
+      "item": [
+        {
+          "name": "Enviar mensaje (nueva conversación)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.conversation) pm.collectionVariables.set('conversationId', body.conversation.id);",
+                  "pm.test('Cita fuentes del catálogo', () => pm.expect(body.sources).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"¿Qué actividades recomiendas en Cartagena para viajar con niños?\"\n}"
+            },
+            "url": "{{baseUrl}}/chat"
+          }
+        },
+        {
+          "name": "Continuar conversación (memoria)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": {{conversationId}},\n  \"message\": \"¿Y si llueve? Dame una alternativa bajo techo.\"\n}"
+            },
+            "url": "{{baseUrl}}/chat"
+          }
+        },
+        {
+          "name": "Listar conversaciones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/chat/conversations"
+          }
+        },
+        {
+          "name": "Detalle de conversación",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/chat/conversations/{{conversationId}}"
+          }
+        },
+        {
+          "name": "Mi cuota mensual",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/usage/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 · Agentes multi-paso",
+      "item": [
+        {
+          "name": "Itinerario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.run) pm.collectionVariables.set('runId', body.run.id);",
+                  "pm.test('Devuelve pasos del agente', () => pm.expect(body.steps).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"destinationId\": 6,\n  \"days\": 3,\n  \"travelers\": 2,\n  \"budget\": \"medio\",\n  \"originCity\": \"Bogotá\",\n  \"interests\": [\"café\", \"naturaleza\"],\n  \"notes\": \"Buscamos actividades tranquilas.\"\n}"
+            },
+            "url": "{{baseUrl}}/agents/itinerary"
+          }
+        },
+        {
+          "name": "Comparador de destinos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"destinationIds\": [1, 4],\n  \"days\": 3,\n  \"travelers\": 2,\n  \"budget\": \"medio\",\n  \"originCity\": \"Bogotá\",\n  \"interests\": [\"playa\", \"cultura\"]\n}"
+            },
+            "url": "{{baseUrl}}/agents/compare"
+          }
+        },
+        {
+          "name": "Historial de ejecuciones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/agents/runs"
+          }
+        },
+        {
+          "name": "Detalle de ejecución",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/agents/runs/{{runId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 · Analítica y Power BI",
+      "item": [
+        {
+          "name": "Reporte de consumo (admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/usage?from={{analyticsFrom}}&to={{analyticsTo}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "usage"],
+              "query": [
+                { "key": "from", "value": "{{analyticsFrom}}" },
+                { "key": "to", "value": "{{analyticsTo}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Exportar CSV",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/usage.csv?from={{analyticsFrom}}&to={{analyticsTo}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "usage.csv"],
+              "query": [
+                { "key": "from", "value": "{{analyticsFrom}}" },
+                { "key": "to", "value": "{{analyticsTo}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear cliente de API",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set('apiKey', pm.response.json().apiKey);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman · Demo Power BI\"\n}"
+            },
+            "url": "{{baseUrl}}/analytics/clients"
+          }
+        },
+        {
+          "name": "Reporte externo con X-API-Key",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/external/analytics/usage?from={{analyticsFrom}}&to={{analyticsTo}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["external", "analytics", "usage"],
+              "query": [
+                { "key": "from", "value": "{{analyticsFrom}}" },
+                { "key": "to", "value": "{{analyticsTo}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reporte externo sin clave (401)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/external/analytics/usage"
+          }
+        }
+      ]
+    }
+  ]
+}

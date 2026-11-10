@@ -117,6 +117,16 @@ export const openapiSpec = {
       name: 'Consumo',
       description: 'Cuota mensual de tokens del usuario',
     },
+    {
+      name: 'Analítica',
+      description:
+        'Reporte agregado de consumo para el panel web y Power BI (solo administradores)',
+    },
+    {
+      name: 'API externa',
+      description:
+        'Consumo del reporte con X-API-Key para Power BI, Excel o scripts',
+    },
   ],
   paths: {
     '/': {
@@ -612,6 +622,148 @@ export const openapiSpec = {
         },
       },
     },
+    '/analytics/usage': {
+      get: {
+        tags: ['Analítica'],
+        summary: 'Reporte agregado de consumo',
+        description:
+          'Totales, desglose por servicio y por usuario, serie diaria y mensual. ' +
+          'El panel web y Power BI consumen exactamente este mismo agregado. ' +
+          'Si no se envían fechas se usan los últimos 30 días.',
+        security: bearer,
+        parameters: [
+          queryParam('from', 'Fecha inicial (YYYY-MM-DD)', {
+            type: 'string',
+            format: 'date',
+            example: '2026-11-01',
+          }),
+          queryParam('to', 'Fecha final inclusive (YYYY-MM-DD)', {
+            type: 'string',
+            format: 'date',
+            example: '2026-11-09',
+          }),
+          queryParam('serviceCode', 'Código del servicio de IA', {
+            type: 'string',
+            example: 'chat_rag',
+          }),
+        ],
+        responses: {
+          200: response('Reporte de consumo', 'AnalyticsUsageResponse'),
+          400: errorResponse('Rango de fechas inválido'),
+          401: errorResponse('No autenticado'),
+          403: errorResponse('Requiere rol administrador'),
+        },
+      },
+    },
+    '/analytics/usage.csv': {
+      get: {
+        tags: ['Analítica'],
+        summary: 'Exportar el consumo en CSV',
+        description:
+          'Un renglón por fecha, servicio, modelo, usuario y estado. Útil para ' +
+          'Excel o para cargar la tabla de hechos en Power BI.',
+        security: bearer,
+        parameters: [
+          queryParam('from', 'Fecha inicial (YYYY-MM-DD)', {
+            type: 'string',
+            format: 'date',
+          }),
+          queryParam('to', 'Fecha final inclusive (YYYY-MM-DD)', {
+            type: 'string',
+            format: 'date',
+          }),
+          queryParam('serviceCode', 'Código del servicio de IA', {
+            type: 'string',
+          }),
+        ],
+        responses: {
+          200: {
+            description: 'Archivo CSV en UTF-8 con BOM',
+            content: {
+              'text/csv': {
+                schema: { type: 'string' },
+              },
+            },
+          },
+          400: errorResponse('Rango de fechas inválido'),
+          401: errorResponse('No autenticado'),
+          403: errorResponse('Requiere rol administrador'),
+        },
+      },
+    },
+    '/analytics/clients': {
+      get: {
+        tags: ['Analítica'],
+        summary: 'Listar clientes de API',
+        description:
+          'Clientes con permiso analytics:read. La clave solo se muestra al crearla.',
+        security: bearer,
+        responses: {
+          200: response('Lista de clientes', 'ApiClientListResponse'),
+          401: errorResponse('No autenticado'),
+          403: errorResponse('Requiere rol administrador'),
+        },
+      },
+      post: {
+        tags: ['Analítica'],
+        summary: 'Crear un cliente de API para Power BI',
+        description:
+          'Genera una clave aleatoria y devuelve el valor completo una única ' +
+          'vez. Guárdala en un lugar seguro para configurarla en Power BI.',
+        security: bearer,
+        requestBody: requestBody('CreateApiClientRequest'),
+        responses: {
+          201: response('Cliente creado con su clave', 'CreatedApiClientResponse'),
+          400: errorResponse('Datos inválidos'),
+          401: errorResponse('No autenticado'),
+          403: errorResponse('Requiere rol administrador'),
+        },
+      },
+    },
+    '/analytics/clients/{id}/status': {
+      patch: {
+        tags: ['Analítica'],
+        summary: 'Activar o desactivar un cliente de API',
+        security: bearer,
+        parameters: [pathParam('id', 'ID del cliente de API')],
+        requestBody: requestBody('ApiClientStatusRequest'),
+        responses: {
+          200: response('Estado actualizado', 'ApiClientStatusResponse'),
+          400: errorResponse('Datos inválidos'),
+          401: errorResponse('No autenticado'),
+          403: errorResponse('Requiere rol administrador'),
+          404: errorResponse('Cliente no encontrado'),
+        },
+      },
+    },
+    '/external/analytics/usage': {      get: {
+        tags: ['API externa'],
+        summary: 'Reporte de consumo para Power BI',
+        description:
+          'Devuelve el mismo agregado que /api/analytics/usage, pero autenticado ' +
+          'con una API key de la tabla api_clients (scope analytics:read). No usa JWT.',
+        security: [{ apiKeyAuth: [] }],
+        parameters: [
+          queryParam('from', 'Fecha inicial (YYYY-MM-DD)', {
+            type: 'string',
+            format: 'date',
+          }),
+          queryParam('to', 'Fecha final inclusive (YYYY-MM-DD)', {
+            type: 'string',
+            format: 'date',
+          }),
+          queryParam('serviceCode', 'Código del servicio de IA', {
+            type: 'string',
+          }),
+        ],
+        responses: {
+          200: response('Reporte de consumo', 'AnalyticsUsageResponse'),
+          400: errorResponse('Rango de fechas inválido'),
+          401: errorResponse('API key faltante, inválida o desactivada'),
+          403: errorResponse('La API key no tiene el permiso requerido'),
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -788,6 +940,183 @@ export const openapiSpec = {
         properties: {
           user: ref('User'),
           quota: ref('Quota'),
+        },
+      },
+      AnalyticsMeta: {
+        type: 'object',
+        properties: {
+          from: { type: 'string', format: 'date', example: '2026-11-01' },
+          to: { type: 'string', format: 'date', example: '2026-11-09' },
+          days: { type: 'integer', example: 9 },
+          serviceCode: { type: 'string', nullable: true, example: null },
+          generatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      AnalyticsTotals: {
+        type: 'object',
+        properties: {
+          requests: { type: 'integer', example: 22 },
+          successfulRequests: { type: 'integer', example: 20 },
+          blockedRequests: { type: 'integer', example: 2 },
+          errorRequests: { type: 'integer', example: 0 },
+          promptTokens: { type: 'integer', example: 8970 },
+          completionTokens: { type: 'integer', example: 13670 },
+          totalTokens: { type: 'integer', example: 22640 },
+          averageTokens: { type: 'integer', example: 1029 },
+          averageLatencyMs: { type: 'integer', example: 1619 },
+          activeUsers: { type: 'integer', example: 2 },
+          successRate: { type: 'number', example: 90.91 },
+        },
+      },
+      AnalyticsServiceUsage: {
+        type: 'object',
+        properties: {
+          serviceCode: { type: 'string', example: 'agent_itinerary' },
+          requests: { type: 'integer', example: 6 },
+          successfulRequests: { type: 'integer', example: 5 },
+          blockedRequests: { type: 'integer', example: 1 },
+          errorRequests: { type: 'integer', example: 0 },
+          promptTokens: { type: 'integer', example: 4050 },
+          completionTokens: { type: 'integer', example: 5950 },
+          totalTokens: { type: 'integer', example: 10000 },
+          averageTokens: { type: 'integer', example: 1667 },
+          averageLatencyMs: { type: 'integer', example: 2434 },
+          activeUsers: { type: 'integer', example: 2 },
+          sharePercent: { type: 'number', example: 44.17 },
+        },
+      },
+      AnalyticsUserUsage: {
+        type: 'object',
+        properties: {
+          userId: { type: 'integer', example: 2 },
+          name: { type: 'string', example: 'Usuario Demo' },
+          email: { type: 'string', example: 'demo@rutaia.local' },
+          role: { type: 'string', enum: ['admin', 'user'] },
+          totalTokens: { type: 'integer', example: 11220 },
+          requests: { type: 'integer', example: 11 },
+          successfulRequests: { type: 'integer', example: 10 },
+          blockedRequests: { type: 'integer', example: 1 },
+          errorRequests: { type: 'integer', example: 0 },
+          averageLatencyMs: { type: 'integer', example: 1500 },
+        },
+      },
+      AnalyticsDailyPoint: {
+        type: 'object',
+        properties: {
+          date: { type: 'string', format: 'date', example: '2026-11-09' },
+          requests: { type: 'integer', example: 2 },
+          successfulRequests: { type: 'integer', example: 2 },
+          blockedRequests: { type: 'integer', example: 0 },
+          totalTokens: { type: 'integer', example: 2720 },
+          promptTokens: { type: 'integer', example: 1060 },
+          completionTokens: { type: 'integer', example: 1660 },
+        },
+      },
+      AnalyticsMonthlyPoint: {
+        type: 'object',
+        properties: {
+          month: { type: 'string', example: '2026-11' },
+          requests: { type: 'integer', example: 17 },
+          successfulRequests: { type: 'integer', example: 15 },
+          blockedRequests: { type: 'integer', example: 2 },
+          totalTokens: { type: 'integer', example: 16940 },
+          promptTokens: { type: 'integer', example: 6730 },
+          completionTokens: { type: 'integer', example: 10210 },
+        },
+      },
+      AnalyticsUsageResponse: {
+        type: 'object',
+        properties: {
+          meta: ref('AnalyticsMeta'),
+          totals: ref('AnalyticsTotals'),
+          byService: {
+            type: 'array',
+            items: ref('AnalyticsServiceUsage'),
+          },
+          byUser: {
+            type: 'array',
+            items: ref('AnalyticsUserUsage'),
+          },
+          daily: {
+            type: 'array',
+            items: ref('AnalyticsDailyPoint'),
+          },
+          monthly: {
+            type: 'array',
+            items: ref('AnalyticsMonthlyPoint'),
+          },
+        },
+      },
+      CreateApiClientRequest: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name: {
+            type: 'string',
+            maxLength: 120,
+            example: 'Power BI · Consumo IA',
+          },
+          scope: {
+            type: 'string',
+            default: 'analytics:read',
+            example: 'analytics:read',
+          },
+        },
+      },
+      ApiClient: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', example: 1 },
+          name: { type: 'string', example: 'Power BI · Consumo IA' },
+          keyPrefix: { type: 'string', example: 'rutaia_8d2de5c' },
+          scope: { type: 'string', example: 'analytics:read' },
+          active: { type: 'boolean', example: true },
+          lastUsedAt: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true,
+          },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      CreatedApiClientResponse: {
+        allOf: [
+          ref('ApiClient'),
+          {
+            type: 'object',
+            properties: {
+              apiKey: {
+                type: 'string',
+                description:
+                  'Clave completa. Solo se devuelve una vez, al crearla.',
+                example: 'rutaia_8d2de5c3797d07ffcd3aba5227a73c066e7cd392b4f4f190',
+              },
+            },
+          },
+        ],
+      },
+      ApiClientListResponse: {
+        type: 'object',
+        properties: {
+          data: {
+            type: 'array',
+            items: ref('ApiClient'),
+          },
+        },
+      },
+      ApiClientStatusRequest: {
+        type: 'object',
+        required: ['active'],
+        properties: {
+          active: { type: 'boolean', example: false },
+        },
+      },
+      ApiClientStatusResponse: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', example: 1 },
+          name: { type: 'string', example: 'Power BI · Consumo IA' },
+          active: { type: 'boolean', example: false },
         },
       },
       AuthResponse: {

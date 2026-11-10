@@ -49,6 +49,9 @@ src/
 - **Mi consumo** con anillo de cuota, saldo, solicitudes y reglas de bloqueo.
 - **Administración** (solo rol `admin`): usuarios/cuotas, destinos, actividades,
   configuración de servicios y activación/desactivación de la IA.
+- **Analítica** (solo `admin`): reporte de consumo con filtros de fecha y servicio,
+  gráficos y exportación CSV.
+- **Conectar Power BI** (solo `admin`): alta y baja de API keys para el reporte.
 
 La navegación usa el hash (`#/dashboard`, `#/catalog`, `#/chat`, `#/itinerary`,
 `#/compare`, `#/runs`, `#/usage`, `#/admin`), por lo que no requiere servidor con

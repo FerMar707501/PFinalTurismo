@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from 'react';
@@ -22,6 +23,17 @@ export function ToastProvider({ children }) {
       setToasts((current) => current.filter((toast) => toast.id !== id));
     }, 4500);
   }, []);
+
+  // Permite notificar desde módulos que no son componentes (por ejemplo el
+  // cliente API al descargar un CSV).
+  useEffect(() => {
+    const handler = (event) => {
+      push(event.detail?.message ?? 'Ocurrió un error.', event.detail?.type);
+    };
+
+    window.addEventListener('rutaia:toast', handler);
+    return () => window.removeEventListener('rutaia:toast', handler);
+  }, [push]);
 
   const value = useMemo(() => ({ push }), [push]);
 

@@ -92,6 +92,11 @@ MySQL 8.4 con `utf8mb4_spanish_ci` y almacenamiento en UTC. El detalle está en
 | `api_clients` | API keys con hash para consumidores externos |
 | `external_cache` | Caché de Open-Meteo, OSRM y Wikipedia |
 
+El panel web (`GET /api/analytics/usage`) y Power BI
+(`GET /api/external/analytics/usage` con `X-API-Key`) calculan el reporte con la misma
+función `getUsageAnalytics`, por lo que las cifras coinciden. Los detalles de conexión
+están en [`powerbi/README.md`](powerbi/README.md).
+
 Datos iniciales: 3 usuarios, 12 destinos, 48 actividades, 3 servicios de IA,
 3 conversaciones, 6 mensajes, 22 registros de consumo y 60 documentos para el RAG.
 
@@ -137,6 +142,12 @@ La API está disponible en `http://localhost:4000` y su documentación interacti
 | POST | `/api/agents/compare` | JWT | Compara de 2 a 4 destinos con un agente multi-paso |
 | GET | `/api/agents/runs` | JWT | Lista las ejecuciones de agentes del usuario |
 | GET | `/api/agents/runs/:id` | JWT | Detalle y pasos de una ejecución propia |
+| GET | `/api/analytics/usage` | JWT admin | Reporte agregado de consumo (totales, servicios, usuarios, series) |
+| GET | `/api/analytics/usage.csv` | JWT admin | Exportación plana del consumo para Excel o Power BI |
+| GET | `/api/analytics/clients` | JWT admin | Clientes de API registrados |
+| POST | `/api/analytics/clients` | JWT admin | Crea una API key (solo se muestra una vez) |
+| PATCH | `/api/analytics/clients/:id/status` | JWT admin | Activa o desactiva una API key |
+| GET | `/api/external/analytics/usage` | X-API-Key | Reporte para Power BI (mismo agregado que el panel) |
 
 Características implementadas:
 
@@ -161,7 +172,7 @@ Características implementadas:
 - `X-Request-Id` en todas las respuestas y en los logs de error.
 - Manejo centralizado de errores (404, JSON inválido, errores de MySQL, validación Zod).
 - Arranque y cierre ordenado del servidor y del pool de MySQL.
-- 58 pruebas de integración con Vitest y Supertest (Groq y APIs externas simulados).
+- 68 pruebas de integración con Vitest y Supertest (Groq y APIs externas simulados).
 
 ### Autenticación rápida
 
@@ -276,6 +287,28 @@ npm run dev
 La API queda en `http://localhost:4000`, con documentación en
 `http://localhost:4000/api/docs` y health check en `http://localhost:4000/api/health`.
 
+#### Analítica y Power BI
+
+```powershell
+$login = Invoke-RestMethod -Method Post `
+  -Uri http://localhost:4000/api/auth/login `
+  -ContentType 'application/json' `
+  -Body (@{ email = 'admin@rutaia.local'; password = 'Admin123!' } | ConvertTo-Json)
+
+# Reporte agregado (mismo que el panel web)
+Invoke-RestMethod -Uri 'http://localhost:4000/api/analytics/usage' `
+  -Headers @{ Authorization = "Bearer $($login.token)" }
+
+# API key para Power BI (la clave se muestra una única vez)
+Invoke-RestMethod -Method Post `
+  -Uri http://localhost:4000/api/analytics/clients `
+  -Headers @{ Authorization = "Bearer $($login.token)" } `
+  -ContentType 'application/json' `
+  -Body (@{ name = 'Power BI · Consumo IA' } | ConvertTo-Json)
+```
+
+Pasos detallados para conectar Power BI Desktop en [`powerbi/README.md`](powerbi/README.md).
+
 Para ejecutar las pruebas:
 
 ```powershell
@@ -307,6 +340,10 @@ El frontend incluye:
   herramientas, fuentes y consumo real.
 - **Historial de agentes** con filtros, detalle de entrada, respuesta y trazabilidad.
 - **Mi consumo**: anillo de cuota, saldo, solicitudes exitosas/bloqueadas y reglas.
+- **Analítica** (solo `admin`): KPIs, serie diaria, desglose por servicio y usuario,
+  histórico mensual y exportación CSV.
+- **Conectar Power BI** (solo `admin`): creación/desactivación de API keys e instrucciones
+  de conexión del reporte.
 - **Administración** (solo `admin`): usuarios y cuotas, destinos, actividades y
   configuración/activación de los servicios de IA.
 
@@ -377,8 +414,8 @@ node scripts/qa-frontend.mjs
 | 4 | Chat RAG, memoria, cuotas e historial | ✅ Completada |
 | 5 | Agentes multi-paso, herramientas y fuentes externas | ✅ Completada |
 | 6 | Frontend React: catálogo, chat, agentes, cuotas y administración | ✅ Completada |
-| 7 | Analítica web y Power BI | ⏳ Pendiente |
-| 8 | Pruebas, Swagger y Postman | ⏳ Pendiente |
+| 7 | Analítica web, Power BI y API externa con API key | ✅ Completada |
+| 8 | Pruebas, Swagger y Postman | 🚧 En curso |
 | 9 | Despliegue y CI/CD | ⏳ Pendiente |
 | 10 | Documentación final y demostración | ⏳ Pendiente |
 

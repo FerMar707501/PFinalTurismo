@@ -10,6 +10,8 @@ import ItineraryPage from './pages/ItineraryPage.jsx';
 import ComparePage from './pages/ComparePage.jsx';
 import RunsPage from './pages/RunsPage.jsx';
 import UsagePage from './pages/UsagePage.jsx';
+import AnalyticsPage from './pages/AnalyticsPage.jsx';
+import PowerBiPage from './pages/PowerBiPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import './App.css';
 
@@ -21,6 +23,8 @@ const VIEWS = [
   'compare',
   'runs',
   'usage',
+  'analytics',
+  'powerbi',
   'admin',
 ];
 
@@ -74,8 +78,9 @@ function AppContent() {
   }, [view]);
 
   const navigate = (nextView, options = {}) => {
-    const safeView =
-      nextView === 'admin' && !isAdmin ? 'dashboard' : nextView;
+    const adminOnly =
+      nextView === 'admin' || nextView === 'analytics' || nextView === 'powerbi';
+    const safeView = adminOnly && !isAdmin ? 'dashboard' : nextView;
     setView(safeView);
     setCatalogFocus(options.destinationId ?? null);
     setFocusRunId(options.runId ?? null);
@@ -86,7 +91,10 @@ function AppContent() {
   };
 
   const safeView = useMemo(
-    () => (view === 'admin' && !isAdmin ? 'dashboard' : view),
+    () =>
+      (view === 'admin' || view === 'analytics' || view === 'powerbi') && !isAdmin
+        ? 'dashboard'
+        : view,
     [view, isAdmin],
   );
 
@@ -115,6 +123,10 @@ function AppContent() {
       ) : null}
       {safeView === 'runs' ? <RunsPage focusRunId={focusRunId} /> : null}
       {safeView === 'usage' ? <UsagePage onNavigate={navigate} /> : null}
+      {safeView === 'analytics' && isAdmin ? (
+        <AnalyticsPage onNavigate={navigate} />
+      ) : null}
+      {safeView === 'powerbi' && isAdmin ? <PowerBiPage /> : null}
       {safeView === 'admin' && isAdmin ? <AdminPage /> : null}
     </Layout>
   );

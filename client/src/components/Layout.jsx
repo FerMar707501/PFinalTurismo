@@ -16,6 +16,8 @@ const MAIN_ITEMS = [
 ];
 
 const ADMIN_ITEMS = [
+  { view: 'analytics', label: 'Analítica y Power BI', icon: 'chart' },
+  { view: 'powerbi', label: 'Conectar Power BI', icon: 'external' },
   { view: 'admin', label: 'Administración', icon: 'settings' },
 ];
 
@@ -27,6 +29,8 @@ const TITLES = {
   compare: 'Comparar destinos',
   runs: 'Historial de agentes',
   usage: 'Mi consumo',
+  analytics: 'Analítica',
+  powerbi: 'Power BI',
   admin: 'Administración',
 };
 

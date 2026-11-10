@@ -113,6 +113,15 @@ app.get(`${API_PREFIX}/docs.json`, (_req, res) => {
   res.json(openapiSpec);
 });
 
+// Endpoint mínimo para que Power BI pueda validar la conexión de la API key.
+app.get(`${API_PREFIX}/external/health`, (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: APP_NAME,
+    today: new Date().toISOString().slice(0, 10),
+  });
+});
+
 app.use(
   `${API_PREFIX}/docs`,
   swaggerUi.serve,

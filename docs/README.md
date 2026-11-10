@@ -1,8 +1,12 @@
 # Documentación
 
-Aquí se almacenarán:
+Esta carpeta reúne los artefactos de entrega:
 
-- `openapi.json` exportado desde Swagger.
-- `postman_collection.json` y `postman_environment.json`.
-- Capturas de pantalla de la aplicación, Swagger, Postman y Power BI.
-- Evidencias de la validación entre el reporte web y Power BI.
+- `openapi.json`: especificación exportada desde Swagger (`/api/docs.json`).
+- `postman_collection.json` y `postman_environment.json`: colección para la demo.
+- `capturas/`: capturas de la aplicación web, Swagger y Power BI.
+- `informe/`: fuentes del informe final y diagramas.
+
+Los documentos se generan con los scripts de diagnóstico (ver el README raíz) y
+las capturas de la interfaz se obtienen con `scripts/qa-frontend.mjs` y
+`scripts/qa-analytics-ui.mjs`.

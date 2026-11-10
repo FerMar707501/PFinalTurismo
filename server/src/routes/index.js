@@ -9,6 +9,8 @@ import servicesRouter from '../modules/services/services.routes.js';
 import usageRouter from '../modules/usage/usage.routes.js';
 import chatRouter from '../modules/chat/chat.routes.js';
 import agentsRouter from '../modules/agents/agents.routes.js';
+import analyticsRouter from '../modules/analytics/analytics.routes.js';
+import externalRouter from '../modules/external/external.routes.js';
 
 const router = Router();
 
@@ -27,6 +29,8 @@ router.get('/', (_req, res) => {
       usage: `${API_PREFIX}/usage`,
       chat: `${API_PREFIX}/chat`,
       agents: `${API_PREFIX}/agents`,
+      analytics: `${API_PREFIX}/analytics/usage`,
+      externalAnalytics: `${API_PREFIX}/external/analytics/usage`,
     },
   });
 });
@@ -40,5 +44,7 @@ router.use('/services', servicesRouter);
 router.use('/usage', usageRouter);
 router.use('/chat', chatRouter);
 router.use('/agents', agentsRouter);
+router.use('/analytics', analyticsRouter);
+router.use('/external/analytics', externalRouter);
 
 export default router;
