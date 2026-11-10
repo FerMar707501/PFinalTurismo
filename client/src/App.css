@@ -1629,6 +1629,171 @@
     0 1px 0 rgba(255, 255, 255, 0.06) inset;
 }
 
+/* ---- Campos con tinte del atardecer ---- */
+.login-card .field {
+  color: #6b3358;
+}
+
+[data-theme='dark'] .login-card .field {
+  color: #f2d3c8;
+}
+
+.login-card .input {
+  border-color: rgba(168, 66, 95, 0.2);
+  background: rgba(255, 255, 255, 0.72);
+  color: #3a1240;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+}
+
+.login-card .input::placeholder {
+  color: rgba(107, 51, 88, 0.42);
+}
+
+.login-card .input:hover {
+  border-color: rgba(168, 66, 95, 0.38);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.login-card .input:focus {
+  border-color: #e8577a;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(232, 87, 122, 0.18);
+}
+
+.login-card .input-with-icon .icon {
+  color: rgba(168, 66, 95, 0.55);
+}
+
+.login-card .input-action {
+  color: rgba(107, 51, 88, 0.6);
+}
+
+.login-card .input-action:hover {
+  background: rgba(232, 87, 122, 0.12);
+  color: #c23c63;
+}
+
+[data-theme='dark'] .login-card .input {
+  border-color: rgba(255, 181, 160, 0.18);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fdeeea;
+  box-shadow: none;
+}
+
+[data-theme='dark'] .login-card .input::placeholder {
+  color: rgba(253, 226, 208, 0.38);
+}
+
+[data-theme='dark'] .login-card .input:hover {
+  border-color: rgba(255, 181, 160, 0.34);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .login-card .input:focus {
+  border-color: #ff9a8b;
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 0 0 3px rgba(255, 154, 139, 0.16);
+}
+
+[data-theme='dark'] .login-card .input-with-icon .icon {
+  color: rgba(255, 181, 160, 0.62);
+}
+
+[data-theme='dark'] .login-card .input-action {
+  color: rgba(253, 226, 208, 0.6);
+}
+
+[data-theme='dark'] .login-card .input-action:hover {
+  background: rgba(255, 154, 139, 0.14);
+  color: #ffb6a0;
+}
+
+/* ---- Botón principal del login ---- */
+.login-card .btn-primary {
+  min-height: 46px;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #ff9d6e 0%, #ee5f7f 46%, #9b4f9e 100%);
+  color: #fff9f4;
+  font-size: 14px;
+  letter-spacing: 0.015em;
+  box-shadow:
+    0 12px 26px rgba(214, 72, 108, 0.32),
+    0 1px 0 rgba(255, 255, 255, 0.28) inset;
+}
+
+.login-card .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(120deg, #ffa87e 0%, #f26b8a 46%, #a558a8 100%);
+  box-shadow:
+    0 16px 32px rgba(214, 72, 108, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.34) inset;
+}
+
+.login-card .btn-primary:focus-visible {
+  outline-color: #c23c63;
+}
+
+[data-theme='dark'] .login-card .btn-primary {
+  background: linear-gradient(120deg, #ffb07c 0%, #f0708c 48%, #b465b6 100%);
+  color: #2a0f2e;
+  box-shadow:
+    0 12px 28px rgba(240, 112, 140, 0.28),
+    0 1px 0 rgba(255, 255, 255, 0.3) inset;
+}
+
+[data-theme='dark'] .login-card .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(120deg, #ffc094 0%, #ff85a0 48%, #c376c4 100%);
+  color: #2a0f2e;
+  box-shadow:
+    0 16px 34px rgba(240, 112, 140, 0.36),
+    0 1px 0 rgba(255, 255, 255, 0.34) inset;
+}
+
+[data-theme='dark'] .login-card .spinner-light {
+  border-color: rgba(42, 15, 46, 0.25);
+  border-top-color: #2a0f2e;
+}
+
+/* ---- Cuentas demo en tono crema ---- */
+.login-card .demo-btn {
+  border-color: rgba(168, 66, 95, 0.16);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.login-card .demo-btn:hover {
+  border-color: rgba(232, 87, 122, 0.5);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.login-card .demo-avatar {
+  background: rgba(232, 87, 122, 0.14);
+  color: #c23c63;
+}
+
+.login-card .demo-avatar-user {
+  background: rgba(255, 170, 90, 0.2);
+  color: #b4641b;
+}
+
+[data-theme='dark'] .login-card .demo-btn {
+  border-color: rgba(255, 181, 160, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme='dark'] .login-card .demo-btn:hover {
+  border-color: rgba(255, 154, 139, 0.4);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+[data-theme='dark'] .login-card .demo-avatar {
+  background: rgba(255, 154, 139, 0.16);
+  color: #ffb6a0;
+}
+
+[data-theme='dark'] .login-card .demo-avatar-user {
+  background: rgba(255, 176, 124, 0.16);
+  color: #ffcb9a;
+}
+
 .login-card-head {
   display: flex;
   align-items: flex-start;
