@@ -141,9 +141,9 @@ export const openapiSpec = {
     '/health': {
       get: {
         tags: ['Sistema'],
-        summary: 'Estado de la API y de MySQL',
+        summary: 'Estado de la API y de PostgreSQL',
         description:
-          'Comprueba que la API esté en ejecución y que la conexión a MySQL responda.',
+          'Comprueba que la API esté en ejecución y que la conexión a PostgreSQL responda.',
         responses: {
           200: response('Servicio y base de datos disponibles', 'HealthResponse'),
           503: response(
@@ -736,7 +736,7 @@ export const openapiSpec = {
         },
       },
     },
-    '/external/analytics/usage': {      get: {
+    '/bi/usage': {      get: {
         tags: ['API externa'],
         summary: 'Reporte de consumo para Power BI',
         description:

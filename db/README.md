@@ -1,23 +1,27 @@
 # Base de datos — RutaIA
 
-Motor: **MySQL 8.4** · Charset `utf8mb4` · Collation `utf8mb4_spanish_ci` · Zona horaria UTC.
+Motor: **PostgreSQL 16** · UTF-8 · zona horaria UTC.
 
 ## Archivos
 
 | Archivo | Contenido |
 |---|---|
-| `schema.sql` | Crea la base, las 11 tablas, índices, claves foráneas y 2 vistas |
-| `seed.sql` | Usuarios, 12 destinos, 48 actividades, 3 servicios IA, conversaciones y consumo de ejemplo |
+| `schema.postgres.sql` | Crea las 11 tablas, índices, claves foráneas, 2 vistas y el trigger `updated_at` |
+| `seed.postgres.sql` | Usuarios, 12 destinos, 48 actividades, 3 servicios IA, conversaciones, consumo de ejemplo y la API key de Power BI |
+| `bi-key.postgres.sql` | Snippet suelto para registrar solo la API key de Power BI (el seed ya la incluye) |
 | `../server/scripts/ingest.js` | Genera los 60 documentos del RAG a partir del catálogo |
+
+> `schema.sql` y `seed.sql` son la versión histórica para MySQL y **no se usan** en el
+> despliegue actual.
 
 ## Modelo
 
 | Tabla | Propósito |
 |---|---|
 | `users` | Usuarios, rol (`admin`/`user`), cuota mensual de tokens y estado |
-| `destinations` | Catálogo de destinos turísticos |
+| `destinations` | Catálogo de destinos turísticos de Guatemala |
 | `activities` | Actividades asociadas a cada destino |
-| `documents` | Fragmentos de texto para la recuperación del RAG (`FULLTEXT`) |
+| `documents` | Fragmentos de texto para la recuperación del RAG (`tsvector`) |
 | `ai_services` | Configuración de los 3 servicios de IA (modelo, prompt, límites) |
 | `conversations` | Conversaciones del chatbot y de los agentes |
 | `messages` | Mensajes con rol, fuentes citadas y tokens |
@@ -31,18 +35,100 @@ Vistas de apoyo:
 - `v_usage_daily`: consumo agregado por día, servicio y usuario.
 - `v_usage_by_service`: consultas y tokens acumulados por servicio.
 
-## Inicialización con Docker
+## Creación de la base
 
-```powershell
-docker compose down -v   # solo si necesitas recrear el volumen
-docker compose up -d
+### Opción A — script del proyecto (recomendado)
+
+Requiere PostgreSQL 16 en ejecución y la conexión configurada en `server/.env`:
+
+```ini
+DATABASE_URL=postgresql://usuario:clave@host:5432/rutaia_db
 ```
 
-Los scripts se ejecutan automáticamente **solo al crear el volumen por primera vez**.
+Luego, desde la carpeta `server/`:
+
+```powershell
+npm install
+npm run db:setup -- --force   # aplica schema.postgres.sql + seed.postgres.sql
+npm run db:ingest             # genera los 60 documentos del RAG
+```
+
+`db:setup` lee y aplica los dos archivos SQL en orden. La bandera `--force` es necesaria
+cuando la base ya tiene usuarios; sin ella el script se detiene para no borrar datos.
+
+Variantes:
+
+| Comando | Efecto |
+|---|---|
+| `npm run db:setup` | Pide confirmación antes de recrear |
+| `npm run db:setup -- --force` | Recrea y siembra sin preguntar (CI/CD) |
+| `npm run db:setup -- --keep` | No hace nada si ya hay usuarios |
+| `npm run db:setup -- --schema-only` | Solo crea las tablas, sin datos |
+
+### Opción B — `psql` directamente
+
+```powershell
+psql "$DATABASE_URL" -f db/schema.postgres.sql
+psql "$DATABASE_URL" -f db/seed.postgres.sql
+cd server; npm run db:ingest
+```
+
+### Opción C — Docker local
+
+```powershell
+docker compose up -d
+cd server
+npm run db:ingest
+```
+
+El contenedor ejecuta los scripts automáticamente **solo la primera vez** que se crea el
+volumen. Para recrear: `docker compose down -v` y luego `docker compose up -d`.
+
+## Verificación
+
+```sql
+-- Conteos esperados
+SELECT (SELECT COUNT(*) FROM destinations) AS destinos,
+       (SELECT COUNT(*) FROM activities)   AS actividades,
+       (SELECT COUNT(*) FROM documents)    AS documentos,
+       (SELECT COUNT(*) FROM users)        AS usuarios;
+-- 12 | 48 | 60 | 3
+
+-- Documentos generados
+SELECT source_type, COUNT(*) FROM documents GROUP BY source_type;
+
+-- Consumo del mes por usuario
+SELECT u.email,
+       u.token_limit_month,
+       COALESCE(SUM(l.total_tokens), 0) AS usado
+FROM users u
+LEFT JOIN usage_logs l
+  ON l.user_id = u.id
+ AND l.created_at >= date_trunc('month', now() AT TIME ZONE 'UTC')
+GROUP BY u.id, u.email, u.token_limit_month;
+
+-- Recuperación RAG
+SELECT title,
+       ts_rank(to_tsvector('spanish', title || ' ' || content),
+               plainto_tsquery('spanish', 'playa con niños')) AS score
+FROM documents
+WHERE to_tsvector('spanish', title || ' ' || content)
+      @@ plainto_tsquery('spanish', 'playa con niños')
+ORDER BY score DESC
+LIMIT 5;
+```
+
+## Credenciales de demostración
+
+| Rol | Correo | Contraseña | Cuota mensual |
+|---|---|---|---|
+| Administrador | `admin@rutaia.local` | `Admin123!` | 500.000 tokens |
+| Usuario | `demo@rutaia.local` | `Demo123!` | 50.000 tokens |
+| Usuario | `maria@rutaia.local` | `Demo123!` | 30.000 tokens |
+
+Las contraseñas están hasheadas con bcrypt (10 rondas). Cambiarlas antes de publicar.
 
 ## Ingesta del RAG
-
-Con el contenedor saludable y las dependencias del backend instaladas:
 
 ```powershell
 cd server
@@ -60,45 +146,13 @@ destination  12
 El script es idempotente: actualiza los documentos existentes de tipo `destination` y
 `activity`, elimina los de entidades que ya no existen y conserva los documentos manuales.
 
-## Credenciales de demostración
-
-| Rol | Correo | Contraseña | Cuota mensual |
-|---|---|---|---|
-| Administrador | `admin@rutaia.local` | `Admin123!` | 500.000 tokens |
-| Usuario | `demo@rutaia.local` | `Demo123!` | 50.000 tokens |
-| Usuario | `maria@rutaia.local` | `Demo123!` | 30.000 tokens |
-
-Las contraseñas están hasheadas con bcrypt (10 rondas). Cambiarlas antes de publicar.
-
-## Consultas de verificación
-
-```sql
--- Documentos generados
-SELECT source_type, COUNT(*) FROM documents GROUP BY source_type;
-
--- Consumo del mes por usuario
-SELECT u.email, u.token_limit_month, COALESCE(SUM(l.total_tokens), 0) AS used
-FROM users u
-LEFT JOIN usage_logs l
-  ON l.user_id = u.id
- AND l.created_at >= DATE_FORMAT(UTC_TIMESTAMP(), '%Y-%m-01')
-GROUP BY u.id;
-
--- Recuperación RAG
-SELECT title, MATCH(title, content) AGAINST ('playa con niños' IN NATURAL LANGUAGE MODE) AS score
-FROM documents
-WHERE MATCH(title, content) AGAINST ('playa con niños' IN NATURAL LANGUAGE MODE)
-ORDER BY score DESC
-LIMIT 5;
-```
-
 ## Reinicio completo
 
 ```powershell
-docker compose down -v
-docker compose up -d --wait
 cd server
+npm run db:setup -- --force
 npm run db:ingest
 ```
 
-> `docker compose down -v` elimina todos los datos locales.
+> `--force` elimina y recrea las tablas: se pierde todo el historial de consumo.
+> En producción, exporta el consumo antes si necesitas conservarlo para Power BI.

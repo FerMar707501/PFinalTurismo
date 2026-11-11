@@ -13,9 +13,9 @@ const SERVICES = [
 ];
 
 const SERVICE_COLORS = {
-  chat_rag: '#12a594',
-  agent_itinerary: '#0d6b4f',
-  agent_compare: '#d9a01a',
+  chat_rag: '#d24a6e',
+  agent_itinerary: '#a24cbb',
+  agent_compare: '#e08a2e',
 };
 
 function isoDay(date) {
@@ -310,7 +310,7 @@ export default function AnalyticsPage({ onNavigate }) {
           <h1>Panel de uso de la IA</h1>
           <p>
             Este reporte sale del endpoint <code>/api/analytics/usage</code>. Power BI
-            consume el mismo agregado vía <code>/api/external/analytics/usage</code>{' '}
+            consume el mismo agregado vía <code>/api/bi/usage</code>{' '}
             con una API key, por lo que las cifras coinciden.
           </p>
         </div>

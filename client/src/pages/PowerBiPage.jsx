@@ -38,7 +38,7 @@ export default function PowerBiPage() {
   const [createdKey, setCreatedKey] = useState(null);
   const [updating, setUpdating] = useState(null);
 
-  const endpoint = `${API_ORIGIN}/api/external/analytics/usage`;
+  const endpoint = `${API_ORIGIN}/api/bi/usage`;
 
   const load = () => {
     if (!token) {

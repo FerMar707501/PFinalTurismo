@@ -4,7 +4,7 @@ Aplicación web con servicios de Inteligencia Artificial: chatbot con RAG, dos a
 multi-paso, autenticación por roles, control de consumo de tokens, API REST documentada,
 reporte web y reporte de Power BI.
 
-**Enfoque:** turismo exclusivamente en **Guatemala** (22 departamentos, 12 destinos demo,
+**Enfoque:** turismo exclusivamente en **Guatemala** (22 departamentos, 12 destinos en el catálogo demo,
 48 actividades y precios en quetzales GTQ). La interfaz incluye modo claro/oscuro y menú
 lateral colapsable.
 
@@ -15,7 +15,7 @@ lateral colapsable.
 | Recurso | URL |
 |---|---|
 | **Aplicación web** | https://rutaia-api-q3y2.onrender.com |
-| **Swagger / API docs** | https://rutaia-api-q3y2.onrender.com/api-docs |
+| **Swagger / API docs** | https://rutaia-api-q3y2.onrender.com/api/docs |
 | **API (JSON OpenAPI)** | https://rutaia-api-q3y2.onrender.com/api/docs.json |
 | **Power BI** | `GET https://rutaia-api-q3y2.onrender.com/api/bi/usage` con cabecera `X-API-Key: rutaia_ce9e9b1489b894c17550d818ee956a4dcdbc0529d2c59cc7` |
 | **Health check** | https://rutaia-api-q3y2.onrender.com/api/health |
@@ -65,12 +65,12 @@ PROYECTOFINAL/
 ├── client/                  # React + Vite (SPA)
 ├── server/                  # Express API (Node.js)
 │   ├── src/
-│   │   ├── config/          # Entorno, MySQL, constantes y OpenAPI
+│   │   ├── config/          # Entorno, PostgreSQL, constantes y OpenAPI
 │   │   ├── middleware/      # Request ID, errores, JWT, roles y validación
 │   │   ├── errors/          # AppError
 │   │   ├── routes/          # Router principal y health check
 │   │   ├── modules/         # auth, users, catalog, services, usage, chat, agents
-│   │   ├── rag/             # Documentos, sincronización y recuperación FULLTEXT
+│   │   ├── rag/             # Documentos, sincronización y recuperación tsvector
 │   │   ├── agents/          # Bucle multi-paso y tool calling
 │   │   ├── tools/           # Catálogo, Open-Meteo, OSRM y Wikipedia
 │   │   ├── utils/           # JWT, bcrypt y paginación
@@ -86,7 +86,7 @@ PROYECTOFINAL/
 ├── docs/                    # Swagger exportado, Postman, capturas
 ├── powerbi/                 # Reporte .pbix
 ├── .github/workflows/       # CI/CD
-├── docker-compose.yml       # MySQL 8 local
+├── docker-compose.yml       # PostgreSQL 16 local
 ├── .env.example             # Variables de Docker Compose
 └── README.md
 ```
@@ -95,14 +95,15 @@ PROYECTOFINAL/
 
 ## Modelo de datos
 
-MySQL 8.4 con `utf8mb4_spanish_ci` y almacenamiento en UTC. El detalle está en
-[`db/README.md`](db/README.md) y el DDL completo en [`db/schema.sql`](db/schema.sql).
+PostgreSQL 16 con UTF-8 y almacenamiento en UTC. El detalle está en
+[`db/README.md`](db/README.md) y el DDL completo en
+[`db/schema.postgres.sql`](db/schema.postgres.sql).
 
 | Tabla | Propósito |
 |---|---|
 | `users` | Usuarios, roles y cuota mensual de tokens |
 | `destinations` / `activities` | Catálogo turístico administrable |
-| `documents` | Fragmentos indexados con `FULLTEXT` para el RAG |
+| `documents` | Fragmentos indexados con `tsvector` para el RAG |
 | `ai_services` | Configuración de los tres servicios de IA |
 | `conversations` / `messages` | Historial del chatbot y de los agentes |
 | `usage_logs` | Hechos de consumo para la analítica y Power BI |
@@ -111,7 +112,7 @@ MySQL 8.4 con `utf8mb4_spanish_ci` y almacenamiento en UTC. El detalle está en
 | `external_cache` | Caché de Open-Meteo, OSRM y Wikipedia |
 
 El panel web (`GET /api/analytics/usage`) y Power BI
-(`GET /api/external/analytics/usage` con `X-API-Key`) calculan el reporte con la misma
+(`GET /api/bi/usage` con `X-API-Key`) calculan el reporte con la misma
 función `getUsageAnalytics`, por lo que las cifras coinciden. Los detalles de conexión
 están en [`powerbi/README.md`](powerbi/README.md).
 
@@ -128,7 +129,7 @@ La API está disponible en `http://localhost:4000` y su documentación interacti
 |---|---|---|---|
 | GET | `/` | Pública | Información general del servicio |
 | GET | `/api` | Pública | Información de la API |
-| GET | `/api/health` | Pública | Estado de la API y de MySQL |
+| GET | `/api/health` | Pública | Estado de la API y de PostgreSQL |
 | GET | `/api/docs` | Pública | Swagger UI |
 | GET | `/api/docs.json` | Pública | Especificación OpenAPI 3.0.3 |
 | POST | `/api/auth/login` | Pública | Inicio de sesión y entrega del JWT |
@@ -165,7 +166,7 @@ La API está disponible en `http://localhost:4000` y su documentación interacti
 | GET | `/api/analytics/clients` | JWT admin | Clientes de API registrados |
 | POST | `/api/analytics/clients` | JWT admin | Crea una API key (solo se muestra una vez) |
 | PATCH | `/api/analytics/clients/:id/status` | JWT admin | Activa o desactiva una API key |
-| GET | `/api/external/analytics/usage` | X-API-Key | Reporte para Power BI (mismo agregado que el panel) |
+| GET | `/api/bi/usage` | X-API-Key | Reporte para Power BI (mismo agregado que el panel) |
 
 Características implementadas:
 
@@ -177,7 +178,7 @@ Características implementadas:
 - Sincronización automática del catálogo con los documentos del RAG.
 - Configuración de servicios de IA; el `system_prompt` solo se expone a administradores.
 - Cuota mensual de tokens calculada desde `usage_logs`, con período y fecha de reinicio.
-- Chat RAG con recuperación `FULLTEXT`, fuentes citables y memoria de los últimos mensajes.
+- Chat RAG con recuperación `tsvector`, fuentes citables y memoria de los últimos mensajes.
 - Historial de conversaciones aislado por usuario, con listado y detalle paginado.
 - Dos agentes multi-paso con *tool calling*: itinerarios y comparación de destinos.
 - Herramientas internas del catálogo y fuentes externas gratuitas: Open-Meteo, OSRM y Wikipedia.
@@ -188,8 +189,8 @@ Características implementadas:
 - CORS restringido por `CORS_ORIGIN`.
 - Rate limit de 300 solicitudes cada 15 minutos por IP.
 - `X-Request-Id` en todas las respuestas y en los logs de error.
-- Manejo centralizado de errores (404, JSON inválido, errores de MySQL, validación Zod).
-- Arranque y cierre ordenado del servidor y del pool de MySQL.
+- Manejo centralizado de errores (404, JSON inválido, errores de PostgreSQL, validación Zod).
+- Arranque y cierre ordenado del servidor y del pool de PostgreSQL.
 - 74 pruebas con Vitest y Supertest: integración de la API y contrato del cliente de Groq.
 
 ### Autenticación rápida
@@ -303,8 +304,8 @@ docker compose up -d
 ```powershell
 cd server
 npm install
-npm run db:ingest   # genera los 60 documentos del RAG (requiere MySQL arriba)
-npm run db:setup -- --force   # recrea base y seed con el cliente mysql (opcional)
+npm run db:ingest   # genera los 60 documentos del RAG (requiere PostgreSQL arriba)
+npm run db:setup -- --force   # aplica schema.postgres.sql + seed.postgres.sql
 npm run dev
 ```
 
@@ -404,19 +405,18 @@ node scripts/qa-frontend.mjs
 
 | Variable | Descripción | Valor por defecto |
 |---|---|---|
-| `MYSQL_ROOT_PASSWORD` | Contraseña del usuario root | `root_local_dev` |
-| `MYSQL_DATABASE` | Nombre de la base | `rutaia` |
-| `MYSQL_USER` | Usuario de la aplicación | `rutaia` |
-| `MYSQL_PASSWORD` | Contraseña de la aplicación | `rutaia_local_dev` |
-| `MYSQL_PORT` | Puerto expuesto | `3306` |
-| `TZ` | Zona horaria del contenedor | `America/Bogota` |
+| `POSTGRES_PASSWORD` | Contraseña del usuario | `rutaia_local_dev` |
+| `POSTGRES_DB` | Nombre de la base | `rutaia` |
+| `POSTGRES_USER` | Usuario de la aplicación | `rutaia` |
+| `POSTGRES_PORT` | Puerto expuesto | `5432` |
+| `TZ` | Zona horaria del contenedor | `America/Guatemala` |
 
 ### Backend (`server/.env`)
 
 | Variable | Descripción |
 |---|---|
 | `PORT` | Puerto de la API (4000) |
-| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Conexión MySQL |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Conexión PostgreSQL (`DATABASE_URL`) |
 | `JWT_SECRET` | Secreto para firmar tokens |
 | `JWT_EXPIRES_IN` | Duración del token (1h) |
 | `GROQ_API_KEY` | API key de Groq |
